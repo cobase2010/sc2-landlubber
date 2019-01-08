@@ -15,6 +15,7 @@ handler = logging.StreamHandler()
 handler.setFormatter(log_format)
 log.addHandler(handler)
 
+LOOPS_PER_MIN = 22.4 * 60
 
 class MyBot(sc2.BotAI):
     def select_target(self):
@@ -30,7 +31,7 @@ class MyBot(sc2.BotAI):
         log.info("Game ended in " + str(result))
 
     def logg(self, msg):
-        log.info("{:6} {}".format(self.state.game_loop, msg))
+        log.info("{:5.2f} {}".format(self.state.game_loop / LOOPS_PER_MIN, msg))
 
     async def on_step(self, iteration):
         larvae = self.units(LARVA)
