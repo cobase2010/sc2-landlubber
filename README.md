@@ -1,10 +1,10 @@
 # LandLubber StarCraft 2 bot
 
-[Discord](https://discord.gg/D9XEhWY)
-[Artificial Overmind Challenge site](https://artificial-overmind.reaktor.com/)
-[python-sc2](https://github.com/Dentosal/python-sc2/)
-[The BotAI-class](https://github.com/Dentosal/python-sc2/wiki/The-BotAI-class)
-[Units and actions](https://github.com/Dentosal/python-sc2/wiki/Units-and-actions)
+- [Discord](https://discord.gg/D9XEhWY)
+- [Artificial Overmind Challenge site](https://artificial-overmind.reaktor.com/)
+- [python-sc2](https://github.com/Dentosal/python-sc2/)
+- [The BotAI-class](https://github.com/Dentosal/python-sc2/wiki/The-BotAI-class)
+- [Units and actions](https://github.com/Dentosal/python-sc2/wiki/Units-and-actions)
 
 ## Rules
 
