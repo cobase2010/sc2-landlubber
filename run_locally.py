@@ -10,7 +10,7 @@ def main():
     race = Race[info["race"]]
 
     run_game(
-        maps.get("Abyssal Reef LE"),
+        maps.get("AcolyteLE"),
         [
             Bot(race, MyBot()),
             Computer(Race.Random, Difficulty.Hard)
