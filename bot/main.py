@@ -90,16 +90,17 @@ class MyBot(sc2.BotAI):
                     self.log("Training roach", logging.DEBUG)
                     await self.do_actions(actions)
                     return
-            # TODO make as many queens
-            elif self.units(SPAWNINGPOOL).ready.exists:
-                if not self.units(QUEEN).exists and hq.is_ready and hq.noqueue:
-                    if self.can_afford(QUEEN):
-                        self.log("Training queen", logging.DEBUG)
-                        actions.append(hq.train(QUEEN))
             elif self.units(ZERGLING).amount < 20 and self.minerals > 1000:
                 if larvae.exists and self.can_afford(ZERGLING):
                     self.log("Training ling")
                     actions.append(larvae.random.train(ZERGLING))
+
+        # TODO make as many queens
+        if self.units(SPAWNINGPOOL).ready.exists:
+            if not self.units(QUEEN).exists and hq.is_ready and hq.noqueue:
+                if self.can_afford(QUEEN):
+                    self.log("Training queen", logging.DEBUG)
+                    actions.append(hq.train(QUEEN))
 
         # Build tree
         if self.can_afford(HATCHERY):
