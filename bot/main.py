@@ -8,7 +8,7 @@ from sc2.player import Bot, Computer
 from sc2.data import race_townhalls
 
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
+logger.setLevel(logging.ERROR)
 logger.propagate = False
 log_format = logging.Formatter('%(levelname)-8s %(message)s')
 handler = logging.StreamHandler()
@@ -47,6 +47,7 @@ class MyBot(sc2.BotAI):
 
     async def on_step(self, iteration):
         larvae = self.units(LARVA)
+        overlords = self.units(OVERLORD)
         forces = self.units(ZERGLING) | self.units(ROACH) | self.units(HYDRALISK)
         actions = []
 
@@ -68,6 +69,10 @@ class MyBot(sc2.BotAI):
                 self.log("Ordering {} forces to attack".format(len(forces.idle)), logging.DEBUG)
                 for unit in forces.idle:
                     actions.append(unit.attack(self.select_target()))
+
+        # Scout home base with overlords
+        for idle_overlord in overlords.idle:
+            actions.append(idle_overlord.move(self.start_location.random_on_distance(random.randrange(20, 30))))
 
         # Training units
         if larvae.exists:
