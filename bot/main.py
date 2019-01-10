@@ -24,7 +24,7 @@ class MyBot(sc2.BotAI):
             return random.choice(self.known_enemy_structures).position
         return self.enemy_start_locations[0]
 
-    def calculate_expansion_order(self):
+    def set_expansion_order(self):
         exps = self.expansion_locations
         del exps[self.start_location]
         for enemy in self.enemy_start_locations:
@@ -35,6 +35,16 @@ class MyBot(sc2.BotAI):
         for enemy in self.enemy_start_locations:
             assert enemy not in sorted, "Enemy location unexpectedly still in expansion locations"
         self.expansions_sorted = sorted
+
+    def set_hq_army_rally_point(self):
+        # TODO set to ramp
+        self.hq_army_rally_point = self.start_location.towards(self.game_info.map_center, 10)
+
+    def get_closest_mineral_for_hatchery(self, hatch):
+        print("Hatch position", hatch.position)
+        res = self.state.mineral_field().closest_to(hatch.position)
+        print(res)
+        return res
 
     def on_start(self):
         self.last_cap_covered = 0
@@ -63,7 +73,9 @@ class MyBot(sc2.BotAI):
         forces = self.units(ZERGLING) | self.units(ROACH) | self.units(HYDRALISK)
         actions = []
         if iteration == 0:
-            self.calculate_expansion_order()
+            self.set_expansion_order()
+            self.set_hq_army_rally_point()
+            actions.append(self.townhalls.first(RALLY_HATCHERY_UNITS, self.hq_army_rally_point))
 
         # Kamikaze if HQ lost
         if not self.townhalls.exists:
@@ -96,44 +108,58 @@ class MyBot(sc2.BotAI):
             patrol = self.start_location.random_on_distance(random.randrange(20, 30))
             actions.append(idle_overlord.move(patrol))
 
-        # Training units
-        if larvae.exists:
-            if self.should_train_overlord():
-                if self.can_afford(OVERLORD):
-                    self.log("Training overlord", logging.DEBUG)
-                    actions.append(larvae.random.train(OVERLORD))
-                    self.last_cap_covered = self.supply_cap
-                    await self.do_actions(actions)
-                    return
-            elif hq.assigned_harvesters < hq.ideal_harvesters:
-                if self.can_afford(DRONE):
-                    self.log("Training drone, currently assigned {}/{}".format(hq.assigned_harvesters, hq.ideal_harvesters), logging.DEBUG)
-                    actions.append(larvae.random.train(DRONE))
-                    await self.do_actions(actions)
-                    return
-            elif self.units(ROACHWARREN).ready.exists:
-                if self.can_afford(ROACH) and larvae.exists:
-                    actions.append(larvae.random.train(ROACH))
-                    self.log("Training roach", logging.DEBUG)
-                    await self.do_actions(actions)
-                    return
-            elif self.units(ZERGLING).amount < 20 and self.minerals > 1000:
-                if larvae.exists and self.can_afford(ZERGLING):
-                    self.log("Training ling")
-                    actions.append(larvae.random.train(ZERGLING))
+        # Set rally points for new hatcheries
+        if iteration % 100 == 0:
+            for hatch in self.units(HATCHERY).not_ready:
+                self.log("Setting rally points for new hatchery", logging.DEBUG)
+                actions.append(hatch(RALLY_HATCHERY_UNITS, self.hq_army_rally_point))
+                actions.append(hatch(RALLY_HATCHERY_WORKERS, self.get_closest_mineral_for_hatchery(hatch)))
+            await self.do_actions(actions)
+            return
 
-        # TODO make as many queens as there are townhalls
-        if self.units(SPAWNINGPOOL).ready.exists:
-            if not self.units(QUEEN).exists and hq.is_ready and hq.noqueue:
-                if self.can_afford(QUEEN):
-                    self.log("Training queen", logging.DEBUG)
-                    actions.append(hq.train(QUEEN))
+        # Training units
+        for townhall in self.townhalls:
+            town_larvae = larvae.closer_than(5, townhall)
+            actions.append(townhall.move(self.enemy_start_locations[0])) # FIXME did not set waypoint
+            if town_larvae.exists:
+                larva = town_larvae.random
+                if self.should_train_overlord():
+                    if self.can_afford(OVERLORD):
+                        self.log("Training overlord", logging.DEBUG)
+                        actions.append(larva.train(OVERLORD))
+                        self.last_cap_covered = self.supply_cap
+                        await self.do_actions(actions)
+                        return
+                if townhall.assigned_harvesters < townhall.ideal_harvesters:
+                    if self.can_afford(DRONE):
+                        self.log("Training drone, current situation at this expansion {}/{}".format(townhall.assigned_harvesters, townhall.ideal_harvesters), logging.DEBUG)
+                        actions.append(larva.train(DRONE))
+                        await self.do_actions(actions)
+                        return
+                if self.units(ROACHWARREN).ready.exists:
+                    if self.can_afford(ROACH) and larvae.exists:
+                        actions.append(larva.train(ROACH))
+                        self.log("Training roach", logging.DEBUG)
+                        await self.do_actions(actions)
+                        return
+                if self.units(ZERGLING).amount < 20 and self.minerals > 1000:
+                    if larvae.exists and self.can_afford(ZERGLING):
+                        self.log("Training ling")
+                        actions.append(larva.train(ZERGLING))
+
+            # TODO make as many queens as there are townhalls
+            if self.units(SPAWNINGPOOL).ready.exists:
+                if not self.units(QUEEN).exists and hq.is_ready and hq.noqueue:
+                    if self.can_afford(QUEEN):
+                        self.log("Training queen", logging.DEBUG)
+                        actions.append(hq.train(QUEEN))
 
         # Build tree
         if self.can_afford(HATCHERY):
             self.log("Building hatchery")
             # TODO Should not be so naive that sites are available and building will succeed and remain intact
-            await self.build(HATCHERY, near=self.expansions_sorted.pop(0), max_distance=1)
+            # FIXME error on pop on empty list
+            await self.build(HATCHERY, self.expansions_sorted.pop(0))
         if not (self.units(SPAWNINGPOOL).exists or self.already_pending(SPAWNINGPOOL)):
             if self.can_afford(SPAWNINGPOOL):
                 self.log("Building spawning pool")
