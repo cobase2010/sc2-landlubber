@@ -8,7 +8,7 @@ from sc2.player import Bot, Computer
 from sc2.data import race_townhalls
 
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.ERROR)
+logger.setLevel(logging.DEBUG)
 logger.propagate = False
 log_format = logging.Formatter('%(levelname)-8s %(message)s')
 handler = logging.StreamHandler()
@@ -23,6 +23,18 @@ class MyBot(sc2.BotAI):
         if self.known_enemy_structures.exists:
             return random.choice(self.known_enemy_structures).position
         return self.enemy_start_locations[0]
+
+    def calculate_expansion_order(self):
+        exps = self.expansion_locations
+        del exps[self.start_location]
+        for enemy in self.enemy_start_locations:
+            del exps[enemy]
+        sorted = self.start_location.sort_by_distance(exps)
+
+        assert self.start_location not in sorted, "Starting location unexpectedly still in expansion locations"
+        for enemy in self.enemy_start_locations:
+            assert enemy not in sorted, "Enemy location unexpectedly still in expansion locations"
+        self.expansions_sorted = sorted
 
     def on_start(self):
         self.last_cap_covered = 0
@@ -50,6 +62,8 @@ class MyBot(sc2.BotAI):
         overlords = self.units(OVERLORD)
         forces = self.units(ZERGLING) | self.units(ROACH) | self.units(HYDRALISK)
         actions = []
+        if iteration == 0:
+            self.calculate_expansion_order()
 
         # Kamikaze if HQ lost
         if not self.townhalls.exists:
@@ -63,6 +77,13 @@ class MyBot(sc2.BotAI):
         else:
             hq = self.townhalls.first
 
+        # if len(forces.idle) > 0:
+        #     self.log("Move to ramp", logging.DEBUG)
+        #     ramp = self.main_base_ramp.points
+        #     print(len(ramp))
+        #     for unit in forces.idle:
+        #         actions.append(unit.move(ramp[0]))
+
         # Attack to enemy base
         if self.units(ROACH).amount > 10 and iteration % 50 == 0:
             if len(forces.idle) > 0:
@@ -72,7 +93,8 @@ class MyBot(sc2.BotAI):
 
         # Scout home base with overlords
         for idle_overlord in overlords.idle:
-            actions.append(idle_overlord.move(self.start_location.random_on_distance(random.randrange(20, 30))))
+            patrol = self.start_location.random_on_distance(random.randrange(20, 30))
+            actions.append(idle_overlord.move(patrol))
 
         # Training units
         if larvae.exists:
@@ -100,7 +122,7 @@ class MyBot(sc2.BotAI):
                     self.log("Training ling")
                     actions.append(larvae.random.train(ZERGLING))
 
-        # TODO make as many queens
+        # TODO make as many queens as there are townhalls
         if self.units(SPAWNINGPOOL).ready.exists:
             if not self.units(QUEEN).exists and hq.is_ready and hq.noqueue:
                 if self.can_afford(QUEEN):
@@ -110,22 +132,34 @@ class MyBot(sc2.BotAI):
         # Build tree
         if self.can_afford(HATCHERY):
             self.log("Building hatchery")
-            await self.build(HATCHERY, near=hq)
+            # TODO Should not be so naive that sites are available and building will succeed and remain intact
+            await self.build(HATCHERY, near=self.expansions_sorted.pop(0), max_distance=1)
         if not (self.units(SPAWNINGPOOL).exists or self.already_pending(SPAWNINGPOOL)):
             if self.can_afford(SPAWNINGPOOL):
                 self.log("Building spawning pool")
                 await self.build(SPAWNINGPOOL, near=hq)
-        if self.units(SPAWNINGPOOL).ready.exists and self.units(EXTRACTOR).amount < 2 and not self.already_pending(EXTRACTOR):
+        if self.units(SPAWNINGPOOL).ready.exists and self.units(EXTRACTOR).amount < 1 and not self.already_pending(EXTRACTOR):
             if self.can_afford(EXTRACTOR):
                 drone = self.workers.random
                 target = self.state.vespene_geyser.closest_to(drone.position)
-                self.log("Building extractor")
+                self.log("Building extractor #1")
                 err = actions.append(drone.build(EXTRACTOR, target))
+        if self.units(SPAWNINGPOOL).ready.exists:
+            if not self.units(LAIR).exists and hq.noqueue:
+                if self.can_afford(LAIR):
+                    self.log("Building lair")
+                    actions.append(hq.build(LAIR))
         if self.units(SPAWNINGPOOL).ready.exists and self.units(EXTRACTOR).amount > 0:
             if not (self.units(ROACHWARREN).exists or self.already_pending(ROACHWARREN)):
                 if self.can_afford(ROACHWARREN):
                     self.log("Building roach warren")
                     await self.build(ROACHWARREN, near=hq)
+        if self.units(ROACHWARREN).ready.exists and self.units(EXTRACTOR).amount < 2 and not self.already_pending(EXTRACTOR):
+            if self.can_afford(EXTRACTOR):
+                drone = self.workers.random
+                target = self.state.vespene_geyser.closest_to(drone.position)
+                self.log("Building extractor #2")
+                err = actions.append(drone.build(EXTRACTOR, target))
 
         # Rare, low-priority actions
         for queen in self.units(QUEEN).idle:
@@ -150,3 +184,13 @@ class MyBot(sc2.BotAI):
 
 
         await self.do_actions(actions)
+
+"""
+
+# From point towards map center
+near=cc.position.towards(self.game_info.map_center, 5)
+
+# Distance between points
+unit.position.to2.distance_to(depo.position.to2)
+
+"""
