@@ -19,6 +19,7 @@ LOOPS_PER_MIN = 22.4 * 60
 HATCHERY_COST_BUFFER_INCREMENT = 50
 HATCHERY_COST = 300
 
+
 class MyBot(sc2.BotAI):
     def select_target(self):
         if self.known_enemy_structures.exists:
@@ -38,7 +39,6 @@ class MyBot(sc2.BotAI):
         self.expansions_sorted = sorted
 
     def set_hq_army_rally_point(self):
-        # TODO set to ramp
         self.hq_army_rally_point = self.start_location.towards(self.game_info.map_center, 10)
 
     def get_closest_mineral_for_hatchery(self, hatch):
@@ -64,7 +64,7 @@ class MyBot(sc2.BotAI):
             cap_safety_buffer = 0
         else:
             cap_safety_buffer = 2 * len(self.townhalls)
-        should = self.supply_left <= cap_safety_buffer and self.supply_cap != self.last_cap_covered
+        should = self.supply_left <= cap_safety_buffer and self.supply_cap != self.last_cap_covered and self.supply_cap < 200
         return should
 
     def should_build_hatchery(self):
@@ -95,13 +95,6 @@ class MyBot(sc2.BotAI):
             return
         else:
             hq = self.townhalls.first
-
-        # if len(forces.idle) > 0:
-        #     self.log("Move to ramp", logging.DEBUG)
-        #     ramp = self.main_base_ramp.points
-        #     print(len(ramp))
-        #     for unit in forces.idle:
-        #         actions.append(unit.move(ramp[0]))
 
         # Attack to enemy base
         # TODO rally first near enemy base/expansion, and then attack with a larger force
