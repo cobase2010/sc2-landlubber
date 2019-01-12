@@ -38,6 +38,9 @@ class MyBot(sc2.BotAI):
             assert enemy not in sorted, "Enemy location unexpectedly still in expansion locations"
         self.expansions_sorted = sorted
 
+    def probability(self, percent=50):
+        return random.randrange(100) < percent
+
     def set_hq_army_rally_point(self):
         self.hq_army_rally_point = self.start_location.towards(self.game_info.map_center, 10)
 
@@ -130,7 +133,7 @@ class MyBot(sc2.BotAI):
                         self.last_cap_covered = self.supply_cap
                         await self.do_actions(actions)
                         return
-                if townhall.assigned_harvesters < townhall.ideal_harvesters:
+                if townhall.assigned_harvesters < townhall.ideal_harvesters and self.probability(85):
                     if self.can_afford(DRONE):
                         self.log("Training drone, current situation at this expansion {}/{}".format(townhall.assigned_harvesters, townhall.ideal_harvesters), logging.DEBUG)
                         actions.append(larva.train(DRONE))
@@ -142,10 +145,9 @@ class MyBot(sc2.BotAI):
                         self.log("Training roach", logging.DEBUG)
                         await self.do_actions(actions)
                         return
-                if self.units(ZERGLING).amount < 20 and self.minerals > 1000:
-                    if larvae.exists and self.can_afford(ZERGLING):
-                        self.log("Training ling")
-                        actions.append(larva.train(ZERGLING))
+                if self.can_afford(ZERGLING):
+                    self.log("Training ling")
+                    actions.append(larva.train(ZERGLING))
 
             # TODO make as many queens as there are townhalls
             if self.units(SPAWNINGPOOL).ready.exists:
