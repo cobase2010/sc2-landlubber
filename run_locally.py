@@ -13,7 +13,7 @@ def main():
         maps.get("AcolyteLE"),
         [
             Bot(race, MyBot()),
-            Computer(Race.Random, Difficulty.Hard)
+            Computer(Race.Random, Difficulty.Harder)
         ],
         realtime=False,
         step_time_limit=1.9,
