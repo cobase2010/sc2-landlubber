@@ -139,19 +139,13 @@ class MyBot(sc2.BotAI):
                     self.log("Training overlord", logging.DEBUG)
                     actions.append(larva.train(OVERLORD))
                     self.last_cap_covered = self.supply_cap
-                    await self.do_actions(actions)
-                    return
-                if self.should_train_drone(townhall):
+                elif self.should_train_drone(townhall):
                     self.log("Training drone, current situation at this expansion {}/{}".format(townhall.assigned_harvesters, townhall.ideal_harvesters), logging.DEBUG)
                     actions.append(larva.train(DRONE))
-                    await self.do_actions(actions)
-                    return
-                if self.units(ROACHWARREN).ready.exists and self.can_afford(ROACH):
+                elif self.units(ROACHWARREN).ready.exists and self.can_afford(ROACH):
                     actions.append(larva.train(ROACH))
                     self.log("Training roach", logging.DEBUG)
-                    await self.do_actions(actions)
-                    return
-                if self.can_afford(ZERGLING):
+                elif self.can_afford(ZERGLING):
                     self.log("Training ling", logging.DEBUG)
                     actions.append(larva.train(ZERGLING))
 
