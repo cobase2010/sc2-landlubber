@@ -63,12 +63,21 @@ class MyBot(sc2.BotAI):
         logger.log(level, "{:4.1f} {:7} {}".format(time_in_minutes, cap_usage, msg))
 
     def should_train_overlord(self):
-        if self.units(OVERLORD).amount == 1:
-            cap_safety_buffer = 0
-        else:
-            cap_safety_buffer = 2 * len(self.townhalls)
-        should = self.supply_left <= cap_safety_buffer and self.supply_cap != self.last_cap_covered and self.supply_cap < 200
-        return should
+        if self.can_afford(OVERLORD):
+            if self.units(OVERLORD).amount == 1:
+                cap_safety_buffer = 0
+            else:
+                cap_safety_buffer = 2 * len(self.townhalls)
+            should = self.supply_left <= cap_safety_buffer and self.supply_cap != self.last_cap_covered and self.supply_cap < 200
+            return should
+
+    def should_train_drone(self, townhall):
+        if townhall.assigned_harvesters < townhall.ideal_harvesters and self.can_afford(DRONE):
+            if len(self.townhalls) == 1:
+                probability = 100
+            else:
+                probability = 75
+            return self.probability(probability)
 
     def should_build_hatchery(self):
         # TODO Expand only after previous expansions are near optimal drone rate
@@ -127,26 +136,23 @@ class MyBot(sc2.BotAI):
             if town_larvae.exists:
                 larva = town_larvae.random
                 if self.should_train_overlord():
-                    if self.can_afford(OVERLORD):
-                        self.log("Training overlord", logging.DEBUG)
-                        actions.append(larva.train(OVERLORD))
-                        self.last_cap_covered = self.supply_cap
-                        await self.do_actions(actions)
-                        return
-                if townhall.assigned_harvesters < townhall.ideal_harvesters and self.probability(85):
-                    if self.can_afford(DRONE):
-                        self.log("Training drone, current situation at this expansion {}/{}".format(townhall.assigned_harvesters, townhall.ideal_harvesters), logging.DEBUG)
-                        actions.append(larva.train(DRONE))
-                        await self.do_actions(actions)
-                        return
-                if self.units(ROACHWARREN).ready.exists:
-                    if self.can_afford(ROACH) and larvae.exists:
-                        actions.append(larva.train(ROACH))
-                        self.log("Training roach", logging.DEBUG)
-                        await self.do_actions(actions)
-                        return
+                    self.log("Training overlord", logging.DEBUG)
+                    actions.append(larva.train(OVERLORD))
+                    self.last_cap_covered = self.supply_cap
+                    await self.do_actions(actions)
+                    return
+                if self.should_train_drone(townhall):
+                    self.log("Training drone, current situation at this expansion {}/{}".format(townhall.assigned_harvesters, townhall.ideal_harvesters), logging.DEBUG)
+                    actions.append(larva.train(DRONE))
+                    await self.do_actions(actions)
+                    return
+                if self.units(ROACHWARREN).ready.exists and self.can_afford(ROACH):
+                    actions.append(larva.train(ROACH))
+                    self.log("Training roach", logging.DEBUG)
+                    await self.do_actions(actions)
+                    return
                 if self.can_afford(ZERGLING):
-                    self.log("Training ling")
+                    self.log("Training ling", logging.DEBUG)
                     actions.append(larva.train(ZERGLING))
 
             # TODO make as many queens as there are townhalls
@@ -160,7 +166,6 @@ class MyBot(sc2.BotAI):
         if self.should_build_hatchery():
             self.log("Building hatchery")
             # TODO Should not be so naive that sites are available and building will succeed and remain intact
-            # FIXME error on pop on empty list
             await self.build(HATCHERY, self.expansions_sorted.pop(0))
         if not (self.units(SPAWNINGPOOL).exists or self.already_pending(SPAWNINGPOOL)):
             if self.can_afford(SPAWNINGPOOL):
