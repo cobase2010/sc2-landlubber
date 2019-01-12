@@ -69,7 +69,7 @@ class MyBot(sc2.BotAI):
 
     def should_build_hatchery(self):
         # TODO Expand only after previous expansions are near optimal drone rate
-        if self.minerals >= self.expansion_cost_buffer:
+        if self.minerals >= self.expansion_cost_buffer and len(self.expansions_sorted) > 0:
             self.expansion_cost_buffer += HATCHERY_COST_BUFFER_INCREMENT
             return True
         return False
