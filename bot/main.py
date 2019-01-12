@@ -121,7 +121,6 @@ class MyBot(sc2.BotAI):
         # Training units
         for townhall in self.townhalls:
             town_larvae = larvae.closer_than(5, townhall)
-            actions.append(townhall.move(self.enemy_start_locations[0])) # FIXME did not set waypoint
             if town_larvae.exists:
                 larva = town_larvae.random
                 if self.should_train_overlord():
