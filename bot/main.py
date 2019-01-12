@@ -16,7 +16,8 @@ handler.setFormatter(log_format)
 logger.addHandler(handler)
 
 LOOPS_PER_MIN = 22.4 * 60
-
+HATCHERY_COST_BUFFER_INCREMENT = 50
+HATCHERY_COST = 300
 
 class MyBot(sc2.BotAI):
     def select_target(self):
@@ -41,13 +42,12 @@ class MyBot(sc2.BotAI):
         self.hq_army_rally_point = self.start_location.towards(self.game_info.map_center, 10)
 
     def get_closest_mineral_for_hatchery(self, hatch):
-        print("Hatch position", hatch.position)
-        res = self.state.mineral_field().closest_to(hatch.position)
-        print(res)
-        return res
+        mineral = self.state.mineral_field().closest_to(hatch.position)
+        return mineral
 
     def on_start(self):
         self.last_cap_covered = 0
+        self.expansion_cost_buffer = HATCHERY_COST
         self.hq_loss_handled = False
         logger.info("Game started, gl hf!")
 
@@ -66,6 +66,13 @@ class MyBot(sc2.BotAI):
             cap_safety_buffer = 2 * len(self.townhalls)
         should = self.supply_left <= cap_safety_buffer and self.supply_cap != self.last_cap_covered
         return should
+
+    def should_build_hatchery(self):
+        # TODO Expand only after previous expansions are near optimal drone rate
+        if self.minerals >= self.expansion_cost_buffer:
+            self.expansion_cost_buffer += HATCHERY_COST_BUFFER_INCREMENT
+            return True
+        return False
 
     async def on_step(self, iteration):
         larvae = self.units(LARVA)
@@ -97,6 +104,7 @@ class MyBot(sc2.BotAI):
         #         actions.append(unit.move(ramp[0]))
 
         # Attack to enemy base
+        # TODO rally first near enemy base/expansion, and then attack with a larger force
         if self.units(ROACH).amount > 10 and iteration % 50 == 0:
             if len(forces.idle) > 0:
                 self.log("Ordering {} forces to attack".format(len(forces.idle)), logging.DEBUG)
@@ -155,7 +163,7 @@ class MyBot(sc2.BotAI):
                         actions.append(hq.train(QUEEN))
 
         # Build tree
-        if self.can_afford(HATCHERY):
+        if self.should_build_hatchery():
             self.log("Building hatchery")
             # TODO Should not be so naive that sites are available and building will succeed and remain intact
             # FIXME error on pop on empty list
