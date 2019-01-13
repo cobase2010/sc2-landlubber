@@ -8,7 +8,7 @@ from sc2.player import Bot, Computer
 from sc2.data import race_townhalls
 
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
+logger.setLevel(logging.INFO)
 logger.propagate = False
 log_format = logging.Formatter('%(levelname)-8s %(message)s')
 handler = logging.StreamHandler()
@@ -18,6 +18,7 @@ logger.addHandler(handler)
 LOOPS_PER_MIN = 22.4 * 60
 HATCHERY_COST_BUFFER_INCREMENT = 50
 HATCHERY_COST = 300
+EXPANSION_DRONE_THRESHOLD = 0.99
 
 
 class MyBot(sc2.BotAI):
@@ -79,11 +80,21 @@ class MyBot(sc2.BotAI):
                 probability = 75
             return self.probability(probability)
 
+    def global_drone_rate(self):
+        assigned_drones = 0
+        ideal_drone_count = 0
+        for town in self.townhalls:
+            ideal_drone_count += town.ideal_harvesters
+            assigned_drones += town.assigned_harvesters
+        return assigned_drones / ideal_drone_count
+
+    # FIXME this seems bugged. Bot starts multiple expansions at the same time
     def should_build_hatchery(self):
-        # TODO Expand only after previous expansions are near optimal drone rate
-        if self.minerals >= self.expansion_cost_buffer and len(self.expansions_sorted) > 0:
-            self.expansion_cost_buffer += HATCHERY_COST_BUFFER_INCREMENT
-            return True
+        if self.global_drone_rate() >= EXPANSION_DRONE_THRESHOLD:
+            if self.minerals >= self.expansion_cost_buffer and len(self.expansions_sorted) > 0:
+                # TODO maybe we should just calculate buffer based on townhall count instead of incrementing it here
+                self.expansion_cost_buffer += HATCHERY_COST_BUFFER_INCREMENT
+                return True
         return False
 
     async def on_step(self, iteration):
@@ -149,12 +160,12 @@ class MyBot(sc2.BotAI):
                     self.log("Training ling", logging.DEBUG)
                     actions.append(larva.train(ZERGLING))
 
-            # TODO make as many queens as there are townhalls
-            if self.units(SPAWNINGPOOL).ready.exists:
-                if not self.units(QUEEN).exists and hq.is_ready and hq.noqueue:
-                    if self.can_afford(QUEEN):
-                        self.log("Training queen", logging.DEBUG)
-                        actions.append(hq.train(QUEEN))
+        # TODO make as many queens as there are townhalls
+        if self.units(SPAWNINGPOOL).ready.exists:
+            if not self.units(QUEEN).exists and hq.is_ready and hq.noqueue:
+                if self.can_afford(QUEEN):
+                    self.log("Training queen", logging.DEBUG)
+                    actions.append(hq.train(QUEEN))
 
         # Build tree
         if self.should_build_hatchery():
@@ -207,7 +218,7 @@ class MyBot(sc2.BotAI):
         if self.supply_left == 0 and iteration % 30 == 0:
             self.log("Not enough overlords!", logging.WARNING)
         if hq.assigned_harvesters > hq.ideal_harvesters and iteration % 20 == 0:
-            self.log("Overassigned drones, should expand!", logging.WARNING)
+            self.log("Overassigned drones, should reassign drones!", logging.WARNING)
 
 
         await self.do_actions(actions)
