@@ -220,7 +220,7 @@ class MyBot(sc2.BotAI):
                     await self.build(ROACHWARREN, near=random_townhall)
         if self.units(ROACHWARREN).ready.exists and self.units(EXTRACTOR).amount < 2 and not self.already_pending(EXTRACTOR):
             if self.can_afford(EXTRACTOR):
-                drone = self.workers.random
+                drone = self.workers.random  # FIXME should be drone near hq, this sometimes picks the drone building expansion
                 target = self.state.vespene_geyser.closest_to(drone.position)
                 self.log("Building extractor #2")
                 actions.append(drone.build(EXTRACTOR, target))
