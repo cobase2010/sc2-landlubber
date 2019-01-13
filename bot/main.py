@@ -131,18 +131,17 @@ class MyBot(sc2.BotAI):
             self.set_hq_army_rally_point()
             actions.append(self.townhalls.first(RALLY_HATCHERY_UNITS, self.hq_army_rally_point))
 
-        # Kamikaze if HQ lost
+        # Kamikaze if all bases lost
         if not self.townhalls.exists:
             if not self.hq_loss_handled:
                 self.hq_loss_handled = True
-                self.log("HQ lost, loss is probably imminent!", logging.WARNING)
+                self.log("All townhalls lost, loss is probably imminent!", logging.WARNING)
                 for unit in self.units(DRONE) | self.units(QUEEN) | forces:
                     actions.append(unit.attack(self.enemy_start_locations[0]))
                 await self.do_actions(actions)
             return
         else:
-            # FIXME This is not actually the HQ but a random townhall!
-            hq = self.townhalls.first
+            random_townhall = self.townhalls.first
 
         # Attack to enemy base
         # TODO rally first near enemy base/expansion, and then attack with a larger force
@@ -187,11 +186,12 @@ class MyBot(sc2.BotAI):
                     actions.append(larva.train(ZERGLING))
 
         # TODO make as many queens as there are townhalls
+        # FIXME This will probably crash when all townhalls lost
         if self.units(SPAWNINGPOOL).ready.exists:
-            if not self.units(QUEEN).exists and hq.is_ready and hq.noqueue:
+            if not self.units(QUEEN).exists and random_townhall.is_ready and random_townhall.noqueue:
                 if self.can_afford(QUEEN):
                     self.log("Training queen", logging.INFO)
-                    actions.append(hq.train(QUEEN))
+                    actions.append(random_townhall.train(QUEEN))
 
         # Build tree
         if self.should_build_hatchery():
@@ -201,7 +201,7 @@ class MyBot(sc2.BotAI):
         if not (self.units(SPAWNINGPOOL).exists or self.already_pending(SPAWNINGPOOL)):
             if self.can_afford(SPAWNINGPOOL):
                 self.log("Building spawning pool")
-                await self.build(SPAWNINGPOOL, near=hq)
+                await self.build(SPAWNINGPOOL, near=random_townhall)
         if self.units(SPAWNINGPOOL).ready.exists and self.units(EXTRACTOR).amount < 1 and not self.already_pending(EXTRACTOR):
             if self.can_afford(EXTRACTOR):
                 drone = self.workers.random
@@ -209,15 +209,15 @@ class MyBot(sc2.BotAI):
                 self.log("Building extractor #1")
                 err = actions.append(drone.build(EXTRACTOR, target))
         if self.units(SPAWNINGPOOL).ready.exists:
-            if not self.units(LAIR).exists and hq.noqueue:
+            if not self.units(LAIR).exists and random_townhall.noqueue:
                 if self.can_afford(LAIR):
                     self.log("Building lair")
-                    actions.append(hq.build(LAIR))
+                    actions.append(random_townhall.build(LAIR))
         if self.units(SPAWNINGPOOL).ready.exists and self.units(EXTRACTOR).amount > 0:
             if not (self.units(ROACHWARREN).exists or self.already_pending(ROACHWARREN)):
                 if self.can_afford(ROACHWARREN):
                     self.log("Building roach warren")
-                    await self.build(ROACHWARREN, near=hq)
+                    await self.build(ROACHWARREN, near=random_townhall)
         if self.units(ROACHWARREN).ready.exists and self.units(EXTRACTOR).amount < 2 and not self.already_pending(EXTRACTOR):
             if self.can_afford(EXTRACTOR):
                 drone = self.workers.random
@@ -230,7 +230,8 @@ class MyBot(sc2.BotAI):
             abilities = await self.get_available_abilities(queen)
             if AbilityId.EFFECT_INJECTLARVA in abilities:
                 self.log("Queen creating larvae", logging.DEBUG)
-                actions.append(queen(EFFECT_INJECTLARVA, hq))
+                actions.append(queen(EFFECT_INJECTLARVA, random_townhall))
+
         for extractor in self.units(EXTRACTOR):
             if extractor.assigned_harvesters < extractor.ideal_harvesters:
                 worker = self.workers.closer_than(20, extractor)
@@ -239,9 +240,9 @@ class MyBot(sc2.BotAI):
                     actions.append(worker.random.gather(extractor))
 
         # Warnings
-        if self.vespene > 600 and iteration % 20 == 0:
+        if self.vespene > 1000 and iteration % 40 == 0:
             self.log("Too much gas", logging.WARNING)
-        if self.supply_left == 0 and iteration % 30 == 0:
+        if self.supply_left == 0 and iteration % 40 == 0:
             self.log("Not enough overlords!", logging.WARNING)
 
         await self.do_actions(actions)
