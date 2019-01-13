@@ -184,14 +184,11 @@ class MyBot(sc2.BotAI):
                 elif self.can_afford(ZERGLING):
                     self.log("Training ling", logging.DEBUG)
                     actions.append(larva.train(ZERGLING))
-
-        # TODO make as many queens as there are townhalls
-        # FIXME This will probably crash when all townhalls lost
-        if self.units(SPAWNINGPOOL).ready.exists:
-            if not self.units(QUEEN).exists and random_townhall.is_ready and random_townhall.noqueue:
+            if self.units(SPAWNINGPOOL).ready.exists and townhall.is_ready and townhall.noqueue:
                 if self.can_afford(QUEEN):
-                    self.log("Training queen", logging.INFO)
-                    actions.append(random_townhall.train(QUEEN))
+                    if not self.units(QUEEN).closer_than(10, townhall):
+                        self.log("Training queen", logging.INFO)
+                        actions.append(townhall.train(QUEEN))
 
         # Build tree
         if self.should_build_hatchery():
@@ -230,7 +227,7 @@ class MyBot(sc2.BotAI):
             abilities = await self.get_available_abilities(queen)
             if AbilityId.EFFECT_INJECTLARVA in abilities:
                 self.log("Queen creating larvae", logging.DEBUG)
-                actions.append(queen(EFFECT_INJECTLARVA, random_townhall))
+                actions.append(queen(EFFECT_INJECTLARVA, self.townhalls.closest_to(queen.position)))
 
         for extractor in self.units(EXTRACTOR):
             if extractor.assigned_harvesters < extractor.ideal_harvesters:
