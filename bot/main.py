@@ -16,8 +16,9 @@ handler.setFormatter(log_format)
 logger.addHandler(handler)
 
 LOOPS_PER_MIN = 22.4 * 60
-HATCHERY_COST_BUFFER_INCREMENT = 100
 HATCHERY_COST = 300
+
+HATCHERY_COST_BUFFER_INCREMENT = 100
 EXPANSION_DRONE_THRESHOLD = 0.90
 DRONE_TRAINING_PROBABILITY_AT_EXPANSIONS = 70
 
@@ -57,6 +58,9 @@ class MyBot(sc2.BotAI):
 
     def on_end(self, result):
         self.log("Game ended in " + str(result))
+        self.log("Score: " + str(self.state.score.score))
+        # from pprint import pprint
+        # pprint(vars(self.state.score))
 
     def log(self, msg, level=logging.INFO):
         time_in_minutes = self.state.game_loop / LOOPS_PER_MIN
@@ -88,7 +92,6 @@ class MyBot(sc2.BotAI):
             assigned_drones += town.assigned_harvesters
         return assigned_drones / ideal_drone_count
 
-    # FIXME this seems bugged. Bot starts multiple expansions at the same time
     def should_build_hatchery(self):
         if self.global_drone_rate() >= EXPANSION_DRONE_THRESHOLD and len(self.expansions_sorted) > 0:
             if self.minerals >= HATCHERY_COST + (HATCHERY_COST_BUFFER_INCREMENT * len(self.townhalls)):
@@ -209,7 +212,7 @@ class MyBot(sc2.BotAI):
             if not self.units(LAIR).exists and random_townhall.noqueue:
                 if self.can_afford(LAIR):
                     self.log("Building lair")
-                    actions.append(random_townhall.build(LAIR))
+                    actions.append(self.townhalls.ready.first.build(LAIR))
         if self.units(SPAWNINGPOOL).ready.exists and self.units(EXTRACTOR).amount > 0:
             if not (self.units(ROACHWARREN).exists or self.already_pending(ROACHWARREN)):
                 if self.can_afford(ROACHWARREN):
