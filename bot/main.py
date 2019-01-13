@@ -97,6 +97,32 @@ class MyBot(sc2.BotAI):
                 return True
         return False
 
+    def get_town_with_free_jobs(self, excluded=None):
+        for town in self.townhalls:
+            if town.assigned_harvesters < town.ideal_harvesters:
+                if excluded is not None:
+                    if town != excluded:
+                        return town
+                else:
+                    return town
+        return None
+
+    def get_reassignable_drone(self, town):
+        workers = self.workers.closer_than(10, town)
+        for worker in workers:
+            if len(worker.orders) == 1 and worker.orders[0].ability.id in {AbilityId.HARVEST_GATHER, AbilityId.HARVEST_RETURN}:
+                return worker
+        return workers.random
+
+    async def reassign_overideal_drones(self, old_town):
+        if old_town.assigned_harvesters > old_town.ideal_harvesters:
+            drone = self.get_reassignable_drone(old_town)
+            new_town = self.get_town_with_free_jobs(old_town)
+            if new_town and drone:
+                self.log("Reassigning drone from overcrowded town", logging.DEBUG)
+                mineral = self.get_closest_mineral_for_hatchery(new_town)
+                await self.do_actions([drone.gather(mineral)])
+
     async def on_step(self, iteration):
         larvae = self.units(LARVA)
         overlords = self.units(OVERLORD)
@@ -143,6 +169,7 @@ class MyBot(sc2.BotAI):
 
         # Training units
         for townhall in self.townhalls:
+            await self.reassign_overideal_drones(townhall)
             town_larvae = larvae.closer_than(5, townhall)
             if town_larvae.exists:
                 larva = town_larvae.random
@@ -217,9 +244,6 @@ class MyBot(sc2.BotAI):
             self.log("Too much gas", logging.WARNING)
         if self.supply_left == 0 and iteration % 30 == 0:
             self.log("Not enough overlords!", logging.WARNING)
-        if hq.assigned_harvesters > hq.ideal_harvesters and iteration % 20 == 0:
-            self.log("Overassigned drones, should reassign drones!", logging.WARNING)
-
 
         await self.do_actions(actions)
 
