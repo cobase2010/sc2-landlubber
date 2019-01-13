@@ -224,13 +224,38 @@ class MyBot(sc2.BotAI):
                 target = self.state.vespene_geyser.closest_to(drone.position)
                 self.log("Building extractor #2")
                 actions.append(drone.build(EXTRACTOR, target))
+        if self.units(ROACHWARREN).ready.exists and not self.units(EVOLUTIONCHAMBER).exists:
+            if self.can_afford(EVOLUTIONCHAMBER):
+                self.log("Building evolution chamber")
+                await self.build(EVOLUTIONCHAMBER, near=random_townhall)
 
         if GLIALRECONSTITUTION not in self.state.upgrades and self.can_afford(GLIALRECONSTITUTION):
             if self.units(ROACHWARREN).ready.exists and self.units(LAIR).exists and self.units(ROACHWARREN).ready.noqueue:
-                self.log("Upgrading roaches with Glial Reconstitution", logging.INFO)
+                self.log("Researching Glial Reconstitution for roaches", logging.INFO)
                 actions.append(self.units(ROACHWARREN).ready.first.research(GLIALRECONSTITUTION))
 
-        # Rare, low-priority actions
+        # Evolution chamber
+        idle_chambers = self.units(EVOLUTIONCHAMBER).ready.noqueue
+        if idle_chambers:
+            if ZERGGROUNDARMORSLEVEL1 not in self.state.upgrades:
+                if self.can_afford(ZERGGROUNDARMORSLEVEL1):
+                    self.log("Researching ground armor 1", logging.INFO)
+                    actions.append(idle_chambers.first.research(ZERGGROUNDARMORSLEVEL1))
+            elif ZERGGROUNDARMORSLEVEL2 not in self.state.upgrades:
+                if self.can_afford(ZERGGROUNDARMORSLEVEL2) and self.units(LAIR).exists:
+                    self.log("Researching ground armor 2", logging.INFO)
+                    actions.append(idle_chambers.first.research(ZERGGROUNDARMORSLEVEL2))
+            elif ZERGMISSILEWEAPONSLEVEL1 not in self.state.upgrades:
+                if self.can_afford(ZERGMISSILEWEAPONSLEVEL1):
+                    self.log("Researching ground missile weapons 1", logging.INFO)
+                    actions.append(idle_chambers.first.research(ZERGMISSILEWEAPONSLEVEL1))
+            elif ZERGMISSILEWEAPONSLEVEL2 not in self.state.upgrades:
+                if self.can_afford(ZERGMISSILEWEAPONSLEVEL2) and self.units(LAIR).exists:
+                    self.log("Researching ground missile weapons 2", logging.INFO)
+                    actions.append(idle_chambers.first.research(ZERGMISSILEWEAPONSLEVEL2))
+
+
+        # Larva creation
         for queen in self.units(QUEEN).idle:
             abilities = await self.get_available_abilities(queen)
             if AbilityId.EFFECT_INJECTLARVA in abilities:
