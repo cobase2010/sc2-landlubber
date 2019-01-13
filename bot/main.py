@@ -204,7 +204,7 @@ class MyBot(sc2.BotAI):
                 drone = self.workers.random
                 target = self.state.vespene_geyser.closest_to(drone.position)
                 self.log("Building extractor #1")
-                err = actions.append(drone.build(EXTRACTOR, target))
+                actions.append(drone.build(EXTRACTOR, target))
         if self.units(SPAWNINGPOOL).ready.exists:
             if not self.units(LAIR).exists and random_townhall.noqueue:
                 if self.can_afford(LAIR):
@@ -220,7 +220,12 @@ class MyBot(sc2.BotAI):
                 drone = self.workers.random
                 target = self.state.vespene_geyser.closest_to(drone.position)
                 self.log("Building extractor #2")
-                err = actions.append(drone.build(EXTRACTOR, target))
+                actions.append(drone.build(EXTRACTOR, target))
+
+        if GLIALRECONSTITUTION not in self.state.upgrades and self.can_afford(GLIALRECONSTITUTION):
+            if self.units(ROACHWARREN).ready.exists and self.units(LAIR).exists and self.units(ROACHWARREN).ready.noqueue:
+                self.log("Upgrading roaches with Glial Reconstitution", logging.INFO)
+                actions.append(self.units(ROACHWARREN).ready.first.research(GLIALRECONSTITUTION))
 
         # Rare, low-priority actions
         for queen in self.units(QUEEN).idle:
