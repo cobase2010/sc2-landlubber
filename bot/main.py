@@ -16,9 +16,10 @@ handler.setFormatter(log_format)
 logger.addHandler(handler)
 
 LOOPS_PER_MIN = 22.4 * 60
-HATCHERY_COST_BUFFER_INCREMENT = 50
+HATCHERY_COST_BUFFER_INCREMENT = 150
 HATCHERY_COST = 300
-EXPANSION_DRONE_THRESHOLD = 0.99
+EXPANSION_DRONE_THRESHOLD = 0.95
+DRONE_TRAINING_PROBABILITY_AT_EXPANSIONS = 65
 
 
 class MyBot(sc2.BotAI):
@@ -51,7 +52,6 @@ class MyBot(sc2.BotAI):
 
     def on_start(self):
         self.last_cap_covered = 0
-        self.expansion_cost_buffer = HATCHERY_COST
         self.hq_loss_handled = False
         logger.info("Game started, gl hf!")
 
@@ -77,7 +77,7 @@ class MyBot(sc2.BotAI):
             if len(self.townhalls) == 1:
                 probability = 100
             else:
-                probability = 75
+                probability = DRONE_TRAINING_PROBABILITY_AT_EXPANSIONS
             return self.probability(probability)
 
     def global_drone_rate(self):
@@ -90,10 +90,8 @@ class MyBot(sc2.BotAI):
 
     # FIXME this seems bugged. Bot starts multiple expansions at the same time
     def should_build_hatchery(self):
-        if self.global_drone_rate() >= EXPANSION_DRONE_THRESHOLD:
-            if self.minerals >= self.expansion_cost_buffer and len(self.expansions_sorted) > 0:
-                # TODO maybe we should just calculate buffer based on townhall count instead of incrementing it here
-                self.expansion_cost_buffer += HATCHERY_COST_BUFFER_INCREMENT
+        if self.global_drone_rate() >= EXPANSION_DRONE_THRESHOLD and len(self.expansions_sorted) > 0:
+            if self.minerals >= HATCHERY_COST + (HATCHERY_COST_BUFFER_INCREMENT * len(self.townhalls)):
                 return True
         return False
 
@@ -143,6 +141,7 @@ class MyBot(sc2.BotAI):
                 await self.do_actions(actions)
             return
         else:
+            # FIXME This is not actually the HQ but a random townhall!
             hq = self.townhalls.first
 
         # Attack to enemy base
@@ -191,7 +190,7 @@ class MyBot(sc2.BotAI):
         if self.units(SPAWNINGPOOL).ready.exists:
             if not self.units(QUEEN).exists and hq.is_ready and hq.noqueue:
                 if self.can_afford(QUEEN):
-                    self.log("Training queen", logging.DEBUG)
+                    self.log("Training queen", logging.INFO)
                     actions.append(hq.train(QUEEN))
 
         # Build tree
