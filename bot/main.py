@@ -52,6 +52,7 @@ class MyBot(sc2.BotAI):
 
     def on_start(self):
         self.init_calculation_done = False
+        self.first_enemy_base_scouting_done = False
         self.last_cap_covered = 0
         self.hq_loss_handled = False
         logger.info("Game started, gl hf!")
@@ -274,6 +275,12 @@ class MyBot(sc2.BotAI):
                 if worker.exists:
                     self.log("Assigning drone to extractor", logging.DEBUG)
                     actions.append(worker.random.gather(extractor))
+
+        if not self.first_enemy_base_scouting_done and self.units(ZERGLING).ready.exists:
+            volunteer = self.units(ZERGLING).ready.first
+            actions.append(volunteer.move(self.enemy_start_locations[0]))
+            self.first_enemy_base_scouting_done = True
+            self.log("Scouting enemy base with first ling")
 
         # Warnings
         if self.vespene > 1000 and iteration % 40 == 0:
