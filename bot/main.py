@@ -2,6 +2,7 @@ import random
 import logging
 import sc2
 import sys
+import time
 from sc2 import Race, Difficulty
 from sc2.constants import *
 from sc2.player import Bot, Computer
@@ -15,7 +16,6 @@ handler = logging.StreamHandler()
 handler.setFormatter(log_format)
 logger.addHandler(handler)
 
-LOOPS_PER_MIN = 22.4 * 60
 HATCHERY_COST = 300
 
 HATCHERY_COST_BUFFER_INCREMENT = 100
@@ -30,12 +30,11 @@ class MyBot(sc2.BotAI):
         return self.enemy_start_locations[0]
 
     def set_expansion_order(self):
-        exps = self.expansion_locations
+        exps = self.expansion_locations  # Fetching this property takes 1.6 seconds after which it is cached forever
         del exps[self.start_location]
         for enemy in self.enemy_start_locations:
             del exps[enemy]
         sorted = self.start_location.sort_by_distance(exps)
-
         assert self.start_location not in sorted, "Starting location unexpectedly still in expansion locations"
         for enemy in self.enemy_start_locations:
             assert enemy not in sorted, "Enemy location unexpectedly still in expansion locations"
@@ -52,6 +51,7 @@ class MyBot(sc2.BotAI):
         return mineral
 
     def on_start(self):
+        self.init_calculation_done = False
         self.last_cap_covered = 0
         self.hq_loss_handled = False
         logger.info("Game started, gl hf!")
@@ -63,7 +63,7 @@ class MyBot(sc2.BotAI):
         # pprint(vars(self.state.score))
 
     def log(self, msg, level=logging.INFO):
-        time_in_minutes = self.state.game_loop / LOOPS_PER_MIN
+        time_in_minutes = self.time / 60
         cap_usage = "{}/{}".format(self.supply_used, self.supply_cap)
         logger.log(level, "{:4.1f} {:7} {}".format(time_in_minutes, cap_usage, msg))
 
@@ -125,14 +125,20 @@ class MyBot(sc2.BotAI):
                 await self.do_actions([drone.gather(mineral)])
 
     async def on_step(self, iteration):
+        # Computationally heavy calculations that may cause step timeout unless handled separately
+        if not self.init_calculation_done:
+            if iteration == 0:
+                self.set_expansion_order()
+            else:
+                self.set_hq_army_rally_point()
+                await self.do(self.townhalls.first(RALLY_HATCHERY_UNITS, self.hq_army_rally_point))
+                self.init_calculation_done = True
+            return
+
         larvae = self.units(LARVA)
         overlords = self.units(OVERLORD)
         forces = self.units(ZERGLING) | self.units(ROACH) | self.units(HYDRALISK)
         actions = []
-        if iteration == 0:
-            self.set_expansion_order()
-            self.set_hq_army_rally_point()
-            actions.append(self.townhalls.first(RALLY_HATCHERY_UNITS, self.hq_army_rally_point))
 
         # Kamikaze if all bases lost
         if not self.townhalls.exists:

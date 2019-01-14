@@ -16,7 +16,7 @@ def main():
             Computer(Race.Random, Difficulty.Harder)
         ],
         realtime=False,
-        step_time_limit=1.9,
+        step_time_limit=1.7,
         game_time_limit=(60*20),
         save_replay_as="test.SC2Replay"
     )
