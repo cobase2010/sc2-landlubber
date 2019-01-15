@@ -35,10 +35,15 @@ class MyBot(sc2.BotAI):
         for enemy in self.enemy_start_locations:
             del exps[enemy]
         sorted = self.start_location.sort_by_distance(exps)
-        assert self.start_location not in sorted, "Starting location unexpectedly still in expansion locations"
-        for enemy in self.enemy_start_locations:
-            assert enemy not in sorted, "Enemy location unexpectedly still in expansion locations"
         self.expansions_sorted = sorted
+
+        if len(self.enemy_start_locations) != 1:
+            self.log("There are more than one enemy start location in this map! Assumptions might fail" + str(len(self.enemy_start_locations)), logging.ERROR)
+        if self.start_location in sorted:
+            self.log("Starting location unexpectedly still in expansion locations", logging.ERROR)
+        for enemy in self.enemy_start_locations:
+            if enemy in sorted:
+                self.log("Enemy location unexpectedly still in expansion locations", logging.ERROR)
 
     def probability(self, percent=50):
         return random.randrange(100) < percent
