@@ -78,7 +78,7 @@ class MyBot(sc2.BotAI):
             if self.units(OVERLORD).amount == 1:
                 cap_safety_buffer = 0
             else:
-                cap_safety_buffer = 2 * len(self.townhalls)
+                cap_safety_buffer = 1 * len(self.townhalls)
             should = self.supply_left <= cap_safety_buffer and self.supply_cap != self.last_cap_covered and self.supply_cap < 200
             return should
 
@@ -184,6 +184,8 @@ class MyBot(sc2.BotAI):
         for townhall in self.townhalls:
             await self.reassign_overideal_drones(townhall)
             town_larvae = larvae.closer_than(5, townhall)
+            # TODO This currently trains one unit and one or more buildings per cycle.
+            # Should we while loop larvae? Or should we only build max one building per cycle?
             if town_larvae.exists:
                 larva = town_larvae.random
                 if self.should_train_overlord():
@@ -214,30 +216,30 @@ class MyBot(sc2.BotAI):
             if self.can_afford(SPAWNINGPOOL):
                 self.log("Building spawning pool")
                 await self.build(SPAWNINGPOOL, near=random_townhall)
-        if self.units(SPAWNINGPOOL).ready.exists and self.units(EXTRACTOR).amount < 1 and not self.already_pending(EXTRACTOR):
-            if self.can_afford(EXTRACTOR):
+
+        if self.units(SPAWNINGPOOL).ready.exists:
+            if self.units(EXTRACTOR).amount < 1 and not self.already_pending(EXTRACTOR) and self.can_afford(EXTRACTOR):
                 drone = self.workers.random
                 target = self.state.vespene_geyser.closest_to(drone.position)
                 self.log("Building extractor #1")
                 actions.append(drone.build(EXTRACTOR, target))
-        if self.units(SPAWNINGPOOL).ready.exists:
             if not self.units(LAIR).exists and random_townhall.noqueue:
                 if self.can_afford(LAIR):
                     self.log("Building lair")
                     actions.append(self.townhalls.ready.first.build(LAIR))
-        if self.units(SPAWNINGPOOL).ready.exists and self.units(EXTRACTOR).amount > 0:
-            if not (self.units(ROACHWARREN).exists or self.already_pending(ROACHWARREN)):
-                if self.can_afford(ROACHWARREN):
-                    self.log("Building roach warren")
-                    await self.build(ROACHWARREN, near=random_townhall)
-        if self.units(ROACHWARREN).ready.exists and self.units(EXTRACTOR).amount < 2 and not self.already_pending(EXTRACTOR):
-            if self.can_afford(EXTRACTOR):
+            if self.units(EXTRACTOR).amount > 0:  # TODO Is this condition necessary?
+                if not (self.units(ROACHWARREN).exists or self.already_pending(ROACHWARREN)):
+                    if self.can_afford(ROACHWARREN):
+                        self.log("Building roach warren")
+                        await self.build(ROACHWARREN, near=random_townhall)
+
+        if self.units(ROACHWARREN).ready.exists:
+            if self.units(EXTRACTOR).amount < 2 and not self.already_pending(EXTRACTOR) and self.can_afford(EXTRACTOR):
                 drone = self.workers.random  # FIXME should be drone near hq, this sometimes picks the drone building expansion
                 target = self.state.vespene_geyser.closest_to(drone.position)
                 self.log("Building extractor #2")
                 actions.append(drone.build(EXTRACTOR, target))
-        if self.units(ROACHWARREN).ready.exists and not self.units(EVOLUTIONCHAMBER).exists:
-            if self.can_afford(EVOLUTIONCHAMBER):
+            if not (self.units(EVOLUTIONCHAMBER).exists or self.already_pending(EVOLUTIONCHAMBER)) and self.can_afford(EVOLUTIONCHAMBER):
                 self.log("Building evolution chamber")
                 await self.build(EVOLUTIONCHAMBER, near=random_townhall)
 
@@ -246,7 +248,7 @@ class MyBot(sc2.BotAI):
                 self.log("Researching Glial Reconstitution for roaches", logging.INFO)
                 actions.append(self.units(ROACHWARREN).ready.first.research(GLIALRECONSTITUTION))
 
-        # Evolution chamber
+        # Evolution chamber upgrades
         idle_chambers = self.units(EVOLUTIONCHAMBER).ready.noqueue
         if idle_chambers:
             if ZERGGROUNDARMORSLEVEL1 not in self.state.upgrades:
@@ -267,7 +269,7 @@ class MyBot(sc2.BotAI):
                     actions.append(idle_chambers.first.research(ZERGMISSILEWEAPONSLEVEL2))
 
 
-        # Larva creation
+        # Queen larvae creation
         for queen in self.units(QUEEN).idle:
             abilities = await self.get_available_abilities(queen)
             if AbilityId.EFFECT_INJECTLARVA in abilities:
