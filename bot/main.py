@@ -164,11 +164,10 @@ class MyBot(sc2.BotAI):
 
         # Attack to enemy base
         # TODO rally first near enemy base/expansion, and then attack with a larger force
-        if self.units(ROACH).amount > 10 and iteration % 50 == 0:
-            if len(forces.idle) > 0:
-                self.log("Ordering {} forces to attack".format(len(forces.idle)), logging.DEBUG)
-                for unit in forces.idle:
-                    actions.append(unit.attack(self.select_target()))
+        if len(forces.idle) > 20 and iteration % 50 == 0:
+            self.log("Ordering {} forces to attack".format(len(forces.idle)), logging.DEBUG)
+            for unit in forces.idle:
+                actions.append(unit.attack(self.select_target()))
 
         # Scout home base with overlords
         for idle_overlord in overlords.idle:
