@@ -223,15 +223,16 @@ class MyBot(sc2.BotAI):
                 target = self.state.vespene_geyser.closest_to(drone.position)
                 self.log("Building extractor #1")
                 actions.append(drone.build(EXTRACTOR, target))
+            if not (self.units(SPINECRAWLER).exists or self.already_pending(SPINECRAWLER)) and self.can_afford(SPINECRAWLER):
+                self.log("Building spine crawler")
+                await self.build(SPINECRAWLER, near=random_townhall)
             if not self.units(LAIR).exists and random_townhall.noqueue:
                 if self.can_afford(LAIR):
                     self.log("Building lair")
                     actions.append(self.townhalls.ready.first.build(LAIR))
-            if self.units(EXTRACTOR).amount > 0:  # TODO Is this condition necessary?
-                if not (self.units(ROACHWARREN).exists or self.already_pending(ROACHWARREN)):
-                    if self.can_afford(ROACHWARREN):
-                        self.log("Building roach warren")
-                        await self.build(ROACHWARREN, near=random_townhall)
+            if not (self.units(ROACHWARREN).exists or self.already_pending(ROACHWARREN)) and self.can_afford(ROACHWARREN):
+                self.log("Building roach warren")
+                await self.build(ROACHWARREN, near=random_townhall)
 
         if self.units(ROACHWARREN).ready.exists:
             if self.units(EXTRACTOR).amount < 2 and not self.already_pending(EXTRACTOR) and self.can_afford(EXTRACTOR):
