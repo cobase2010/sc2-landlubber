@@ -226,7 +226,7 @@ class MyBot(sc2.BotAI):
             if not (self.units(SPINECRAWLER).exists or self.already_pending(SPINECRAWLER)) and self.can_afford(SPINECRAWLER):
                 self.log("Building spine crawler")
                 await self.build(SPINECRAWLER, near=random_townhall)
-            if not self.units(LAIR).exists and random_townhall.noqueue:
+            if not (self.units(LAIR).exists or self.already_pending(LAIR)) and random_townhall.noqueue:
                 if self.can_afford(LAIR):
                     self.log("Building lair")
                     actions.append(self.townhalls.ready.first.build(LAIR))
