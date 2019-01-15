@@ -21,7 +21,7 @@ HATCHERY_COST = 300
 HATCHERY_COST_BUFFER_INCREMENT = 100
 EXPANSION_DRONE_THRESHOLD = 0.90
 DRONE_TRAINING_PROBABILITY_AT_EXPANSIONS = 70
-
+MAX_NUMBER_OF_DRONES = 48
 
 class MyBot(sc2.BotAI):
     def select_target(self):
@@ -83,12 +83,16 @@ class MyBot(sc2.BotAI):
             return should
 
     def should_train_drone(self, townhall):
-        if townhall.assigned_harvesters < townhall.ideal_harvesters and self.can_afford(DRONE):
-            if len(self.townhalls) == 1:
-                probability = 100
-            else:
-                probability = DRONE_TRAINING_PROBABILITY_AT_EXPANSIONS
-            return self.probability(probability)
+        if len(self.units(DRONE)) < MAX_NUMBER_OF_DRONES:
+            if townhall.assigned_harvesters < townhall.ideal_harvesters and self.can_afford(DRONE):
+                if len(self.townhalls) == 1:
+                    probability = 100
+                else:
+                    probability = DRONE_TRAINING_PROBABILITY_AT_EXPANSIONS
+                return self.probability(probability)
+        else:
+            self.log("Reached max number of drones", logging.DEBUG)
+            return False
 
     def global_drone_rate(self):
         assigned_drones = 0
