@@ -18,6 +18,7 @@ logger.addHandler(handler)
 
 HATCHERY_COST = 300
 
+MAX_BASE_DOOR_RANGE = 30
 HATCHERY_COST_BUFFER_INCREMENT = 100
 EXPANSION_DRONE_THRESHOLD = 0.90
 DRONE_TRAINING_PROBABILITY_AT_EXPANSIONS = 70
@@ -49,13 +50,31 @@ class MyBot(sc2.BotAI):
         return random.randrange(100) < percent
 
     def set_hq_army_rally_point(self):
-        self.hq_army_rally_point = self.start_location.towards(self.game_info.map_center, 10)
+        # Bot has main_base_ramp but it sometimes points to the back door ramp if base has multiple ramps
+        self.ramps_distance_sorted = sorted(self._game_info.map_ramps, key=lambda ramp: ramp.top_center.distance_to(self.start_location))
+        doors = []
+        for ramp in self.ramps_distance_sorted:
+            if ramp.top_center.distance_to(self.start_location) <= MAX_BASE_DOOR_RANGE:
+                doors.append(ramp)
+        if len(doors) == 1:
+            self.hq_army_rally_point = doors[0].top_center
+            self.log("This base seems to have only one ramp")
+        elif len(doors) == 2:
+            self.log("This base seems to have two ramps, let's make a guess and rally at the smaller one", logging.WARNING)
+            if doors[0].size < doors[1].size:
+                self.hq_army_rally_point = doors[0].top_center
+            else:
+                self.hq_army_rally_point = doors[1].top_center
+        else:
+            self.log("This base seems to have many ramps, hard to tell where to rally", logging.ERROR)
+            self.hq_army_rally_point = self.start_location.towards(self.game_info.map_center, 10)
 
     def get_closest_mineral_for_hatchery(self, hatch):
         mineral = self.state.mineral_field().closest_to(hatch.position)
         return mineral
 
     def on_start(self):
+        self.ramps_distance_sorted = None
         self.init_calculation_done = False
         self.first_enemy_base_scouting_done = False
         self.last_cap_covered = 0
