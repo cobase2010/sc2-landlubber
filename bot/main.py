@@ -78,6 +78,7 @@ class MyBot(sc2.BotAI):
         self.init_calculation_done = False
         self.first_enemy_base_scouting_done = False
         self.last_cap_covered = 0
+        self.hq_army_rally_point = None
         self.hq_loss_handled = False
         if self.enemy_race != Race.Random:
             self.known_enemy_race = self.enemy_race
@@ -194,7 +195,10 @@ class MyBot(sc2.BotAI):
 
         # Scout home base with overlords
         for idle_overlord in overlords.idle:
-            patrol = self.start_location.random_on_distance(random.randrange(20, 30))
+            if len(overlords) < 4:
+                patrol = self.hq_army_rally_point.random_on_distance(random.randrange(1, 5))
+            else:
+                patrol = self.start_location.random_on_distance(random.randrange(20, 30))
             actions.append(idle_overlord.move(patrol))
 
         # Set rally points for new hatcheries
