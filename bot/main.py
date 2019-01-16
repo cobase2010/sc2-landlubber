@@ -297,11 +297,21 @@ class MyBot(sc2.BotAI):
             self.first_enemy_base_scouting_done = True
             self.log("Scouting enemy base with first ling")
 
-        # Counter-strategy
-        if self.known_enemy_units and iteration % 20 == 0:
+        # Reacting to enemy movement
+        if self.known_enemy_units and iteration % 10 == 0:
+            # Intelligence
             if self.known_enemy_race is None:
                 self.known_enemy_race = self.known_enemy_units[0].race
                 self.log("Enemy is now known to be " + str(self.known_enemy_race))
+
+            # Base defend
+            for exp in self.owned_expansions:
+                enemies_close_to_exp = self.known_enemy_units.closer_than(30, exp)
+                if enemies_close_to_exp:
+                    if len(enemies_close_to_exp) == 1:
+                        self.log("Enemy is probably scouting our base")
+                    if enemies_close_to_exp(DRONE) | enemies_close_to_exp(PROBE) | enemies_close_to_exp(SCV):
+                        self.log("Enemy harvester in our base!")
 
         # Warnings
         if self.vespene > 1000 and iteration % 40 == 0:
