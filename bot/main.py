@@ -60,6 +60,10 @@ class MyBot(sc2.BotAI):
         self.first_enemy_base_scouting_done = False
         self.last_cap_covered = 0
         self.hq_loss_handled = False
+        if self.enemy_race != Race.Random:
+            self.known_enemy_race = self.enemy_race
+        else:
+            self.known_enemy_race = None
         logger.info("Game started, gl hf!")
 
     def on_end(self, result):
@@ -292,6 +296,12 @@ class MyBot(sc2.BotAI):
             actions.append(volunteer.move(self.enemy_start_locations[0]))
             self.first_enemy_base_scouting_done = True
             self.log("Scouting enemy base with first ling")
+
+        # Counter-strategy
+        if self.known_enemy_units and iteration % 20 == 0:
+            if self.known_enemy_race is None:
+                self.known_enemy_race = self.known_enemy_units[0].race
+                self.log("Enemy is now known to be " + str(self.known_enemy_race))
 
         # Warnings
         if self.vespene > 1000 and iteration % 40 == 0:
