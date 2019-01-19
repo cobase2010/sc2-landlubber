@@ -100,11 +100,12 @@ async def produce_larvae(bot):
     return actions
 
 
-async def assign_idle_drones_to_minerals(bot):
+def assign_idle_drones_to_minerals(bot):
     actions = []
     for drone in bot.units(DRONE).idle:
         new_town = get_town_with_free_jobs(bot.townhalls, old_town)
         if new_town:
             bot.log("Reassigning idle drone", logging.DEBUG)
             mineral = get_closest_mineral_for_hatchery(bot.state.mineral_field(), new_town)
-            await bot.do_actions([drone.gather(mineral)])
+            actions.append(drone.gather(mineral))
+    return actions
