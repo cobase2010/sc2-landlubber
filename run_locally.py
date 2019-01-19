@@ -1,3 +1,4 @@
+import random
 import json
 from sc2 import run_game, maps, Race, Difficulty
 from sc2.player import Bot, Computer
@@ -10,7 +11,7 @@ def main():
     race = Race[info["race"]]
 
     run_game(
-        maps.get("AcolyteLE"),
+        random.choice(maps.get()),
         [
             Bot(race, MyBot()),
             Computer(Race.Random, Difficulty.Harder)
