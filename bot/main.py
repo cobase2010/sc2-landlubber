@@ -208,6 +208,7 @@ class MyBot(sc2.BotAI):
 
         actions += tech.upgrade_tech(self)
         actions += await economy.produce_larvae(self)
+        actions += economy.assign_idle_drones_to_minerals(self)
         actions += economy.assign_drones_to_extractors(self)
 
         if not self.first_enemy_base_scouting_done and self.units(ZERGLING).ready.exists:
@@ -241,7 +242,7 @@ class MyBot(sc2.BotAI):
                         for unit in defenders:
                             actions.append(unit.attack(aggressor.position))  # Attack the position, not the unit to avoid being drawn too far
                     else:
-                        if self.time < 180:
+                        if self.time < 180: # Worker rush
                             for drone in self.units(DRONE):
                                 actions.append(drone.attack(aggressor.position))
 
