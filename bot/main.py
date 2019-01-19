@@ -94,7 +94,7 @@ class MyBot(sc2.BotAI):
         # Computationally heavy calculations that may cause step timeout unless handled separately
         if not self.init_calculation_done:
             if iteration == 0:
-                self.expansions_sorted = economy.get_expansion_order(self.expansion_locations, self.start_location, self.enemy_start_locations)
+                self.expansions_sorted = economy.get_expansion_order(self.expansion_locations, self.start_location, self.enemy_start_locations, logger)
             else:
                 self.set_hq_army_rally_point()
                 await self.do(self.townhalls.first(RALLY_HATCHERY_UNITS, self.hq_army_rally_point))
@@ -120,7 +120,7 @@ class MyBot(sc2.BotAI):
 
         # Attack to enemy base
         # TODO rally first near enemy base/expansion, and then attack with a larger force
-        if len(forces.idle) > 20 and iteration % 50 == 0:
+        if len(forces.idle) > 50 and iteration % 50 == 0:
             self.log("Ordering {} forces to attack".format(len(forces.idle)), logging.DEBUG)
             for unit in forces.idle:
                 actions.append(unit.attack(self.select_target()))
@@ -224,13 +224,22 @@ class MyBot(sc2.BotAI):
                 self.log("Enemy is now known to be " + str(self.known_enemy_race))
 
             # Base defend
-            for exp in self.owned_expansions:
-                enemies_close_to_exp = self.known_enemy_units.closer_than(30, exp)
-                if enemies_close_to_exp:
-                    if len(enemies_close_to_exp) == 1:
-                        self.log("Enemy is probably scouting our base")
-                    if enemies_close_to_exp(DRONE) | enemies_close_to_exp(PROBE) | enemies_close_to_exp(SCV):
-                        self.log("Enemy harvester in our base!")
+            for town in self.townhalls:
+                enemies_approaching = self.known_enemy_units.closer_than(30, town)
+                if enemies_approaching:
+                    if len(enemies_approaching) == 1:
+                        self.log("Enemy is probably scouting our base", logging.DEBUG)
+                    if enemies_approaching(DRONE) | enemies_approaching(PROBE) | enemies_approaching(SCV):
+                        self.log("Enemy harvester in our base!", logging.DEBUG)
+                    else:
+                        self.log("Enemy in our base!", logging.DEBUG)
+                enemies_dangerously_near = self.known_enemy_units.closer_than(15, town)
+                if enemies_dangerously_near:
+                    aggressor = enemies_dangerously_near.first
+                    defenders = forces.idle.closer_than(30, aggressor)
+                    for unit in defenders:
+                        actions.append(unit.attack(aggressor.position))  # Attack the position, not the unit to avoid being drawn too far
+
 
         # Warnings
         if self.vespene > 1000 and iteration % 40 == 0:
