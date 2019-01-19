@@ -75,3 +75,24 @@ def should_train_drone(bot, townhall):
 
 def get_closest_mineral_for_hatchery(minerals, hatch):
     return minerals.closest_to(hatch.position)
+
+
+def assign_drones_to_extractors(bot):
+    actions = []
+    for extractor in bot.units(EXTRACTOR):
+        if extractor.assigned_harvesters < extractor.ideal_harvesters:
+            worker = bot.workers.closer_than(20, extractor)
+            if worker.exists:
+                bot.log("Assigning drone to extractor", logging.DEBUG)
+                actions.append(worker.random.gather(extractor))
+    return actions
+
+
+async def produce_larvae(bot):
+    actions = []
+    for queen in bot.units(QUEEN).idle:
+        abilities = await bot.get_available_abilities(queen)
+        if AbilityId.EFFECT_INJECTLARVA in abilities:
+            bot.log("Queen creating larvae", logging.DEBUG)
+            actions.append(queen(EFFECT_INJECTLARVA, bot.townhalls.closest_to(queen.position)))
+    return actions

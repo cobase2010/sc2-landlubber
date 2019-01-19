@@ -206,27 +206,9 @@ class MyBot(sc2.BotAI):
                 self.log("Building evolution chamber")
                 await self.build(EVOLUTIONCHAMBER, near=random_townhall)
 
-        if GLIALRECONSTITUTION not in self.state.upgrades and self.can_afford(GLIALRECONSTITUTION):
-            if self.units(ROACHWARREN).ready.exists and self.units(LAIR).exists and self.units(ROACHWARREN).ready.noqueue:
-                self.log("Researching Glial Reconstitution for roaches", logging.INFO)
-                actions.append(self.units(ROACHWARREN).ready.first.research(GLIALRECONSTITUTION))
-
-        # Evolution chamber upgrades
-        actions += tech.get_upgrade_actions(self)
-
-        # Queen larvae creation
-        for queen in self.units(QUEEN).idle:
-            abilities = await self.get_available_abilities(queen)
-            if AbilityId.EFFECT_INJECTLARVA in abilities:
-                self.log("Queen creating larvae", logging.DEBUG)
-                actions.append(queen(EFFECT_INJECTLARVA, self.townhalls.closest_to(queen.position)))
-
-        for extractor in self.units(EXTRACTOR):
-            if extractor.assigned_harvesters < extractor.ideal_harvesters:
-                worker = self.workers.closer_than(20, extractor)
-                if worker.exists:
-                    self.log("Assigning drone to extractor", logging.DEBUG)
-                    actions.append(worker.random.gather(extractor))
+        actions += tech.upgrade_tech(self)
+        actions += await economy.produce_larvae(self)
+        actions += economy.assign_drones_to_extractors(self)
 
         if not self.first_enemy_base_scouting_done and self.units(ZERGLING).ready.exists:
             volunteer = self.units(ZERGLING).ready.first
