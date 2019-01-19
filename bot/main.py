@@ -237,9 +237,13 @@ class MyBot(sc2.BotAI):
                 if enemies_dangerously_near:
                     aggressor = enemies_dangerously_near.first
                     defenders = forces.idle.closer_than(30, aggressor)
-                    for unit in defenders:
-                        actions.append(unit.attack(aggressor.position))  # Attack the position, not the unit to avoid being drawn too far
-
+                    if defenders:
+                        for unit in defenders:
+                            actions.append(unit.attack(aggressor.position))  # Attack the position, not the unit to avoid being drawn too far
+                    else:
+                        if self.time < 180:
+                            for drone in self.units(DRONE):
+                                actions.append(drone.attack(aggressor.position))
 
         # Warnings
         if self.vespene > 1000 and iteration % 40 == 0:
