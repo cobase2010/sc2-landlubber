@@ -3,7 +3,7 @@ from sc2.constants import *
 import bot.util as util
 
 HATCHERY_COST = 300
-HATCHERY_COST_BUFFER_INCREMENT = 100
+HATCHERY_COST_BUFFER_INCREMENT = 90
 EXPANSION_DRONE_THRESHOLD = 0.90
 MAX_NUMBER_OF_DRONES = 48
 DRONE_TRAINING_PROBABILITY_AT_EXPANSIONS = 70
@@ -36,7 +36,7 @@ def get_town_with_free_jobs(townhalls, excluded=None):
     return None
 
 
-def get_expansion_order(expansion_locations, start_location, enemy_start_locations):
+def get_expansion_order(expansion_locations, start_location, enemy_start_locations, logger):
     exps = expansion_locations  # Fetching this property takes 1.6 seconds after which it is cached forever
     del exps[start_location]
     for enemy in enemy_start_locations:
