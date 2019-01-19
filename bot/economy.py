@@ -15,6 +15,8 @@ def global_drone_rate(townhalls):
     for town in townhalls:
         ideal_drone_count += town.ideal_harvesters
         assigned_drones += town.assigned_harvesters
+    if ideal_drone_count == 0:  # If no jobs available, we should definitely expand
+        return 1.0
     return assigned_drones / ideal_drone_count
 
 
