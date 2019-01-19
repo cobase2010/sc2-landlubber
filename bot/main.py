@@ -7,6 +7,8 @@ from sc2 import Race, Difficulty
 from sc2.constants import *
 from sc2.player import Bot, Computer
 from sc2.data import race_townhalls
+import bot.economy as economy
+import bot.tech as tech
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -16,38 +18,14 @@ handler = logging.StreamHandler()
 handler.setFormatter(log_format)
 logger.addHandler(handler)
 
-HATCHERY_COST = 300
-
 MAX_BASE_DOOR_RANGE = 30
-HATCHERY_COST_BUFFER_INCREMENT = 100
-EXPANSION_DRONE_THRESHOLD = 0.90
-DRONE_TRAINING_PROBABILITY_AT_EXPANSIONS = 70
-MAX_NUMBER_OF_DRONES = 48
+
 
 class MyBot(sc2.BotAI):
     def select_target(self):
         if self.known_enemy_structures.exists:
             return random.choice(self.known_enemy_structures).position
         return self.enemy_start_locations[0]
-
-    def set_expansion_order(self):
-        exps = self.expansion_locations  # Fetching this property takes 1.6 seconds after which it is cached forever
-        del exps[self.start_location]
-        for enemy in self.enemy_start_locations:
-            del exps[enemy]
-        sorted = self.start_location.sort_by_distance(exps)
-        self.expansions_sorted = sorted
-
-        if len(self.enemy_start_locations) != 1:
-            self.log("There are more than one enemy start location in this map! Assumptions might fail" + str(len(self.enemy_start_locations)), logging.ERROR)
-        if self.start_location in sorted:
-            self.log("Starting location unexpectedly still in expansion locations", logging.ERROR)
-        for enemy in self.enemy_start_locations:
-            if enemy in sorted:
-                self.log("Enemy location unexpectedly still in expansion locations", logging.ERROR)
-
-    def probability(self, percent=50):
-        return random.randrange(100) < percent
 
     def set_hq_army_rally_point(self):
         # Bot has main_base_ramp but it sometimes points to the back door ramp if base has multiple ramps
@@ -69,11 +47,8 @@ class MyBot(sc2.BotAI):
             self.log("This base seems to have many ramps, hard to tell where to rally", logging.ERROR)
             self.hq_army_rally_point = self.start_location.towards(self.game_info.map_center, 10)
 
-    def get_closest_mineral_for_hatchery(self, hatch):
-        mineral = self.state.mineral_field().closest_to(hatch.position)
-        return mineral
-
     def on_start(self):
+        self.expansions_sorted = []
         self.ramps_distance_sorted = None
         self.init_calculation_done = False
         self.first_enemy_base_scouting_done = False
@@ -106,63 +81,20 @@ class MyBot(sc2.BotAI):
             should = self.supply_left <= cap_safety_buffer and self.supply_cap != self.last_cap_covered and self.supply_cap < 200
             return should
 
-    def should_train_drone(self, townhall):
-        if len(self.units(DRONE)) < MAX_NUMBER_OF_DRONES:
-            if townhall.assigned_harvesters < townhall.ideal_harvesters and self.can_afford(DRONE):
-                if len(self.townhalls) == 1:
-                    probability = 100
-                else:
-                    probability = DRONE_TRAINING_PROBABILITY_AT_EXPANSIONS
-                return self.probability(probability)
-        else:
-            self.log("Reached max number of drones", logging.DEBUG)
-            return False
-
-    def global_drone_rate(self):
-        assigned_drones = 0
-        ideal_drone_count = 0
-        for town in self.townhalls:
-            ideal_drone_count += town.ideal_harvesters
-            assigned_drones += town.assigned_harvesters
-        return assigned_drones / ideal_drone_count
-
-    def should_build_hatchery(self):
-        if self.global_drone_rate() >= EXPANSION_DRONE_THRESHOLD and len(self.expansions_sorted) > 0:
-            if self.minerals >= HATCHERY_COST + (HATCHERY_COST_BUFFER_INCREMENT * len(self.townhalls)):
-                return True
-        return False
-
-    def get_town_with_free_jobs(self, excluded=None):
-        for town in self.townhalls:
-            if town.assigned_harvesters < town.ideal_harvesters:
-                if excluded is not None:
-                    if town != excluded:
-                        return town
-                else:
-                    return town
-        return None
-
-    def get_reassignable_drone(self, town):
-        workers = self.workers.closer_than(10, town)
-        for worker in workers:
-            if len(worker.orders) == 1 and worker.orders[0].ability.id in {AbilityId.HARVEST_GATHER, AbilityId.HARVEST_RETURN}:
-                return worker
-        return workers.random
-
     async def reassign_overideal_drones(self, old_town):
         if old_town.assigned_harvesters > old_town.ideal_harvesters:
-            drone = self.get_reassignable_drone(old_town)
-            new_town = self.get_town_with_free_jobs(old_town)
+            drone = economy.get_reassignable_drone(old_town, self.workers)
+            new_town = economy.get_town_with_free_jobs(self.townhalls, old_town)
             if new_town and drone:
                 self.log("Reassigning drone from overcrowded town", logging.DEBUG)
-                mineral = self.get_closest_mineral_for_hatchery(new_town)
+                mineral = economy.get_closest_mineral_for_hatchery(self.state.mineral_field(), new_town)
                 await self.do_actions([drone.gather(mineral)])
 
     async def on_step(self, iteration):
         # Computationally heavy calculations that may cause step timeout unless handled separately
         if not self.init_calculation_done:
             if iteration == 0:
-                self.set_expansion_order()
+                self.expansions_sorted = economy.get_expansion_order(self.expansion_locations, self.start_location, self.enemy_start_locations)
             else:
                 self.set_hq_army_rally_point()
                 await self.do(self.townhalls.first(RALLY_HATCHERY_UNITS, self.hq_army_rally_point))
@@ -206,7 +138,7 @@ class MyBot(sc2.BotAI):
             for hatch in self.units(HATCHERY).not_ready:
                 self.log("Setting rally points for new hatchery", logging.DEBUG)
                 actions.append(hatch(RALLY_HATCHERY_UNITS, self.hq_army_rally_point))
-                actions.append(hatch(RALLY_HATCHERY_WORKERS, self.get_closest_mineral_for_hatchery(hatch)))
+                actions.append(hatch(RALLY_HATCHERY_WORKERS, economy.get_closest_mineral_for_hatchery(self.state.mineral_field(), hatch)))
             await self.do_actions(actions)
             return
 
@@ -222,7 +154,7 @@ class MyBot(sc2.BotAI):
                     self.log("Training overlord", logging.DEBUG)
                     actions.append(larva.train(OVERLORD))
                     self.last_cap_covered = self.supply_cap
-                elif self.should_train_drone(townhall):
+                elif economy.should_train_drone(self, townhall):
                     self.log("Training drone, current situation at this expansion {}/{}".format(townhall.assigned_harvesters, townhall.ideal_harvesters), logging.DEBUG)
                     actions.append(larva.train(DRONE))
                 elif self.units(ROACHWARREN).ready.exists and self.can_afford(ROACH):
@@ -238,7 +170,7 @@ class MyBot(sc2.BotAI):
                         actions.append(townhall.train(QUEEN))
 
         # Build tree
-        if self.should_build_hatchery():
+        if economy.should_build_hatchery(self.townhalls, self.minerals, self.expansions_sorted):
             self.log("Building hatchery")
             # TODO Should not be so naive that sites are available and building will succeed and remain intact
             await self.build(HATCHERY, self.expansions_sorted.pop(0))
@@ -280,25 +212,7 @@ class MyBot(sc2.BotAI):
                 actions.append(self.units(ROACHWARREN).ready.first.research(GLIALRECONSTITUTION))
 
         # Evolution chamber upgrades
-        idle_chambers = self.units(EVOLUTIONCHAMBER).ready.noqueue
-        if idle_chambers:
-            if ZERGGROUNDARMORSLEVEL1 not in self.state.upgrades:
-                if self.can_afford(ZERGGROUNDARMORSLEVEL1):
-                    self.log("Researching ground armor 1", logging.INFO)
-                    actions.append(idle_chambers.first.research(ZERGGROUNDARMORSLEVEL1))
-            elif ZERGGROUNDARMORSLEVEL2 not in self.state.upgrades:
-                if self.can_afford(ZERGGROUNDARMORSLEVEL2) and self.units(LAIR).exists:
-                    self.log("Researching ground armor 2", logging.INFO)
-                    actions.append(idle_chambers.first.research(ZERGGROUNDARMORSLEVEL2))
-            elif ZERGMISSILEWEAPONSLEVEL1 not in self.state.upgrades:
-                if self.can_afford(ZERGMISSILEWEAPONSLEVEL1):
-                    self.log("Researching ground missile weapons 1", logging.INFO)
-                    actions.append(idle_chambers.first.research(ZERGMISSILEWEAPONSLEVEL1))
-            elif ZERGMISSILEWEAPONSLEVEL2 not in self.state.upgrades:
-                if self.can_afford(ZERGMISSILEWEAPONSLEVEL2) and self.units(LAIR).exists:
-                    self.log("Researching ground missile weapons 2", logging.INFO)
-                    actions.append(idle_chambers.first.research(ZERGMISSILEWEAPONSLEVEL2))
-
+        actions += tech.get_upgrade_actions(self)
 
         # Queen larvae creation
         for queen in self.units(QUEEN).idle:
@@ -343,13 +257,3 @@ class MyBot(sc2.BotAI):
             self.log("Not enough overlords!", logging.WARNING)
 
         await self.do_actions(actions)
-
-"""
-
-# From point towards map center
-near=cc.position.towards(self.game_info.map_center, 5)
-
-# Distance between points
-unit.position.to2.distance_to(depo.position.to2)
-
-"""
