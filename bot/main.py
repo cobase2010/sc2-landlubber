@@ -119,14 +119,7 @@ class MyBot(sc2.BotAI):
             random_townhall = self.townhalls.first
 
         actions += army.get_army_actions(iteration, forces.idle, self.hq_army_rally_point, self.known_enemy_structures, self.enemy_start_locations)
-
-        # Scout home base with overlords
-        for idle_overlord in overlords.idle:
-            if len(overlords) < 4:
-                patrol = self.hq_army_rally_point.random_on_distance(random.randrange(1, 5))
-            else:
-                patrol = self.start_location.random_on_distance(random.randrange(20, 30))
-            actions.append(idle_overlord.move(patrol))
+        actions += army.patrol_with_overlords(overlords.idle, self.hq_army_rally_point, self.start_location)
 
         # Hatchery rally points
         if iteration % 100 == 0:
