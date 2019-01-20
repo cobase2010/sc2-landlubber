@@ -90,6 +90,7 @@ class MyBot(sc2.BotAI):
                 mineral = economy.get_closest_mineral_for_hatchery(self.state.mineral_field(), new_town)
                 await self.do_actions([drone.gather(mineral)])
 
+    # MAIN LOOP =========================================================================
     async def on_step(self, iteration):
         # Computationally heavy calculations that may cause step timeout unless handled separately
         if not self.init_calculation_done:
@@ -97,7 +98,6 @@ class MyBot(sc2.BotAI):
                 self.expansions_sorted = economy.get_expansion_order(self.expansion_locations, self.start_location, self.enemy_start_locations, logger)
             else:
                 self.set_hq_army_rally_point()
-                await self.do(self.townhalls.first(RALLY_HATCHERY_UNITS, self.hq_army_rally_point))
                 self.init_calculation_done = True
             return
 
@@ -133,14 +133,12 @@ class MyBot(sc2.BotAI):
                 patrol = self.start_location.random_on_distance(random.randrange(20, 30))
             actions.append(idle_overlord.move(patrol))
 
-        # Set rally points for new hatcheries
+        # Hatchery rally points
         if iteration % 100 == 0:
-            for hatch in self.units(HATCHERY).not_ready:
-                self.log("Setting rally points for new hatchery", logging.DEBUG)
+            for hatch in self.townhalls:
                 actions.append(hatch(RALLY_HATCHERY_UNITS, self.hq_army_rally_point))
-                actions.append(hatch(RALLY_HATCHERY_WORKERS, economy.get_closest_mineral_for_hatchery(self.state.mineral_field(), hatch)))
-            await self.do_actions(actions)
-            return
+                if not hatch.is_ready:
+                    actions.append(hatch(RALLY_HATCHERY_WORKERS, economy.get_closest_mineral_for_hatchery(self.state.mineral_field(), hatch)))
 
         # Training units
         for townhall in self.townhalls:
