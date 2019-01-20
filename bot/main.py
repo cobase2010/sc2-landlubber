@@ -48,10 +48,11 @@ class MyBot(sc2.BotAI):
             self.hq_army_rally_point = self.start_location.towards(self.game_info.map_center, 10)
 
     def on_start(self):
+        self.active_scout_tag = None
+        self.attempted_scouting_enemy_start_locations = False
         self.expansions_sorted = []
         self.ramps_distance_sorted = None
         self.init_calculation_done = False
-        self.first_enemy_base_scouting_done = False
         self.last_cap_covered = 0
         self.hq_army_rally_point = None
         self.hq_loss_handled = False
@@ -92,6 +93,9 @@ class MyBot(sc2.BotAI):
 
     # MAIN LOOP =========================================================================
     async def on_step(self, iteration):
+        if self.state.action_errors:
+            self.log(self.state.action_errors, logging.ERROR)
+
         # Computationally heavy calculations that may cause step timeout unless handled separately
         if not self.init_calculation_done:
             if iteration == 0:
@@ -209,11 +213,22 @@ class MyBot(sc2.BotAI):
         actions += economy.assign_idle_drones_to_minerals(self)
         actions += economy.assign_drones_to_extractors(self)
 
-        if not self.first_enemy_base_scouting_done and self.units(ZERGLING).ready.exists:
-            volunteer = self.units(ZERGLING).ready.first
-            actions.append(volunteer.move(self.enemy_start_locations[0]))
-            self.first_enemy_base_scouting_done = True
-            self.log("Scouting enemy base with first ling")
+        # Scouting
+        scout = self.units.find_by_tag(self.active_scout_tag)
+        if not scout:
+            if self.units(ZERGLING).ready.exists:
+                scout = self.units(ZERGLING).ready.first
+                self.active_scout_tag = scout.tag
+                self.log("Assigned a new scout " + str(scout.tag), logging.DEBUG)
+        if scout:
+            if scout.is_idle:
+                if not self.attempted_scouting_enemy_start_locations:
+                    targets = self.enemy_start_locations
+                    self.attempted_scouting_enemy_start_locations = True
+                else:
+                    targets = self.expansions_sorted
+                for location in targets:
+                    actions.append(scout.move(location, queue=True))
 
         # Reacting to enemy movement
         if self.known_enemy_units and iteration % 10 == 0:
