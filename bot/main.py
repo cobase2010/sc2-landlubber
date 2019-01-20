@@ -7,6 +7,7 @@ from sc2 import Race, Difficulty
 from sc2.constants import *
 from sc2.player import Bot, Computer
 from sc2.data import race_townhalls
+import bot.army as army
 import bot.economy as economy
 import bot.tech as tech
 
@@ -22,11 +23,6 @@ MAX_BASE_DOOR_RANGE = 30
 
 
 class MyBot(sc2.BotAI):
-    def select_target(self):
-        if self.known_enemy_structures.exists:
-            return random.choice(self.known_enemy_structures).position
-        return self.enemy_start_locations[0]
-
     def set_hq_army_rally_point(self):
         # Bot has main_base_ramp but it sometimes points to the back door ramp if base has multiple ramps
         self.ramps_distance_sorted = sorted(self._game_info.map_ramps, key=lambda ramp: ramp.top_center.distance_to(self.start_location))
@@ -122,12 +118,7 @@ class MyBot(sc2.BotAI):
         else:
             random_townhall = self.townhalls.first
 
-        # Attack to enemy base
-        # TODO rally first near enemy base/expansion, and then attack with a larger force
-        if len(forces.idle) > 50 and iteration % 50 == 0:
-            self.log("Ordering {} forces to attack".format(len(forces.idle)), logging.DEBUG)
-            for unit in forces.idle:
-                actions.append(unit.attack(self.select_target()))
+        actions += army.get_army_actions(iteration, forces.idle, self.hq_army_rally_point, self.known_enemy_structures, self.enemy_start_locations)
 
         # Scout home base with overlords
         for idle_overlord in overlords.idle:
