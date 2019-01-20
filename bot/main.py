@@ -154,7 +154,7 @@ class MyBot(sc2.BotAI):
                         self.log("Training queen", logging.INFO)
                         actions.append(townhall.train(QUEEN))
 
-        await build.build(self)
+        await build.begin_projects(self)
         actions += tech.upgrade_tech(self)
         actions += await economy.produce_larvae(self)
         actions += economy.assign_idle_drones_to_minerals(self)
