@@ -8,6 +8,7 @@ from sc2.constants import *
 from sc2.player import Bot, Computer
 from sc2.data import race_townhalls
 import bot.army as army
+import bot.build as build
 import bot.economy as economy
 import bot.tech as tech
 
@@ -115,11 +116,9 @@ class MyBot(sc2.BotAI):
                     actions.append(unit.attack(self.enemy_start_locations[0]))
                 await self.do_actions(actions)
             return
-        else:
-            random_townhall = self.townhalls.first
 
         actions += army.get_army_actions(iteration, forces.idle, self.hq_army_rally_point, self.known_enemy_structures, self.enemy_start_locations)
-        actions += army.patrol_with_overlords(overlords.idle, self.hq_army_rally_point, self.start_location)
+        actions += army.patrol_with_overlords(overlords, self.hq_army_rally_point, self.start_location)
 
         # Hatchery rally points
         if iteration % 100 == 0:
@@ -155,43 +154,7 @@ class MyBot(sc2.BotAI):
                         self.log("Training queen", logging.INFO)
                         actions.append(townhall.train(QUEEN))
 
-        # Build tree
-        if economy.should_build_hatchery(self.townhalls, self.minerals, self.expansions_sorted):
-            self.log("Building hatchery")
-            # TODO Should not be so naive that sites are available and building will succeed and remain intact
-            await self.build(HATCHERY, self.expansions_sorted.pop(0))
-        if not (self.units(SPAWNINGPOOL).exists or self.already_pending(SPAWNINGPOOL)):
-            if self.can_afford(SPAWNINGPOOL):
-                self.log("Building spawning pool")
-                await self.build(SPAWNINGPOOL, near=random_townhall)
-
-        if self.units(SPAWNINGPOOL).ready.exists:
-            if self.units(EXTRACTOR).amount < 1 and not self.already_pending(EXTRACTOR) and self.can_afford(EXTRACTOR):
-                drone = self.workers.random
-                target = self.state.vespene_geyser.closest_to(drone.position)
-                self.log("Building extractor #1")
-                actions.append(drone.build(EXTRACTOR, target))
-            if not (self.units(SPINECRAWLER).exists or self.already_pending(SPINECRAWLER)) and self.can_afford(SPINECRAWLER):
-                self.log("Building spine crawler")
-                await self.build(SPINECRAWLER, near=random_townhall)
-            if not (self.units(LAIR).exists or self.already_pending(LAIR)) and random_townhall.noqueue:
-                if self.can_afford(LAIR):
-                    self.log("Building lair")
-                    actions.append(self.townhalls.ready.first.build(LAIR))
-            if not (self.units(ROACHWARREN).exists or self.already_pending(ROACHWARREN)) and self.can_afford(ROACHWARREN):
-                self.log("Building roach warren")
-                await self.build(ROACHWARREN, near=random_townhall)
-
-        if self.units(ROACHWARREN).ready.exists:
-            if self.units(EXTRACTOR).amount < 2 and not self.already_pending(EXTRACTOR) and self.can_afford(EXTRACTOR):
-                drone = self.workers.random  # FIXME should be drone near hq, this sometimes picks the drone building expansion
-                target = self.state.vespene_geyser.closest_to(drone.position)
-                self.log("Building extractor #2")
-                actions.append(drone.build(EXTRACTOR, target))
-            if not (self.units(EVOLUTIONCHAMBER).exists or self.already_pending(EVOLUTIONCHAMBER)) and self.can_afford(EVOLUTIONCHAMBER):
-                self.log("Building evolution chamber")
-                await self.build(EVOLUTIONCHAMBER, near=random_townhall)
-
+        await build.build(self)
         actions += tech.upgrade_tech(self)
         actions += await economy.produce_larvae(self)
         actions += economy.assign_idle_drones_to_minerals(self)

@@ -20,7 +20,7 @@ def get_army_actions(iteration, forces, rally, enemy_structures, enemy_start_loc
 # Scout home base with overlords
 def patrol_with_overlords(overlords, rally, start_location):
     actions = []
-    for overlord in overlords:
+    for overlord in overlords.idle:
         if len(overlords) < 4:
             patrol = rally.random_on_distance(random.randrange(1, 5))
         else:
