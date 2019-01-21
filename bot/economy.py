@@ -21,9 +21,10 @@ def global_drone_rate(townhalls):
 
 
 def should_build_hatchery(townhalls, minerals, expansions_sorted):
-    if global_drone_rate(townhalls) >= EXPANSION_DRONE_THRESHOLD and len(expansions_sorted) > 0:
-        if minerals >= HATCHERY_COST + (HATCHERY_COST_BUFFER_INCREMENT * len(townhalls)):
-            return True
+    if not townhalls.not_ready:
+        if global_drone_rate(townhalls) >= EXPANSION_DRONE_THRESHOLD and len(expansions_sorted) > 0:
+            if minerals >= HATCHERY_COST + (HATCHERY_COST_BUFFER_INCREMENT * len(townhalls)):
+                return True
     return False
 
 
