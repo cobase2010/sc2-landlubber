@@ -45,6 +45,7 @@ class MyBot(sc2.BotAI):
             self.hq_army_rally_point = self.start_location.towards(self.game_info.map_center, 10)
 
     def on_start(self):
+        self.score_logged = False
         self.active_scout_tag = None
         self.attempted_scouting_enemy_start_locations = False
         self.expansions_sorted = []
@@ -92,6 +93,24 @@ class MyBot(sc2.BotAI):
     async def on_step(self, iteration):
         if self.state.action_errors:
             self.log(self.state.action_errors, logging.ERROR)
+
+        if not self.score_logged and self.time > 300 and self.time < 305:
+            self.score_logged = True
+            s = self.state.score
+            self.log("score unit stru minerals  gas     rate     idle")
+            self.log("{:5} {:4.0f} {:4.0f} {:4.0f}/{:4.0f} {:3.0f}/{:3.0f} {:4.0f}/{:3.0f} {:.1f}/{:.1f}".format(
+                s.score,
+                s.total_value_units,
+                s.total_value_structures,
+                s.spent_minerals,
+                s.collected_minerals,
+                s.spent_vespene,
+                s.collected_vespene,
+                s.collection_rate_minerals,
+                s.collection_rate_vespene,
+                s.idle_worker_time,
+                s.idle_production_time
+            ))
 
         # Computationally heavy calculations that may cause step timeout unless handled separately
         if not self.init_calculation_done:
@@ -142,9 +161,10 @@ class MyBot(sc2.BotAI):
                 elif economy.should_train_drone(self, townhall):
                     self.log("Training drone, current situation at this expansion {}/{}".format(townhall.assigned_harvesters, townhall.ideal_harvesters), logging.DEBUG)
                     actions.append(larva.train(DRONE))
-                elif self.units(ROACHWARREN).ready.exists and self.can_afford(ROACH):
-                    actions.append(larva.train(ROACH))
-                    self.log("Training roach", logging.DEBUG)
+                elif self.units(ROACHWARREN).ready.exists:
+                    if self.can_afford(ROACH):
+                        actions.append(larva.train(ROACH))
+                        self.log("Training roach", logging.DEBUG)
                 elif self.can_afford(ZERGLING):
                     self.log("Training ling", logging.DEBUG)
                     actions.append(larva.train(ZERGLING))

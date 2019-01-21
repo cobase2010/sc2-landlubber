@@ -24,9 +24,6 @@ async def begin_projects(bot):
             drone = bot.workers.random
             target = bot.state.vespene_geyser.closest_to(drone.position)
             await bot.do_actions([drone.build(EXTRACTOR, target)])
-
-        await build(bot, SPINECRAWLER)
-
         if not (bot.units(LAIR).exists or bot.already_pending(LAIR)) and random_townhall.noqueue:
             if bot.can_afford(LAIR):
                 bot.log("Building lair")
