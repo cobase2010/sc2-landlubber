@@ -12,18 +12,19 @@ async def build(bot, it):
 async def begin_projects(bot):
     random_townhall = bot.townhalls.first
 
-    if economy.should_build_hatchery(bot.townhalls, bot.minerals, bot.expansions_sorted):
+    if economy.should_build_hatchery(bot):
         bot.log("Building hatchery")
         await bot.build(HATCHERY, bot.expansions_sorted.pop(0))  # TODO Should not be so naive that sites are available and building will succeed and remain intact
 
     await build(bot, SPAWNINGPOOL)
 
-    if bot.units(SPAWNINGPOOL).ready.exists:
+    if bot.units(SPAWNINGPOOL).exists:
         if bot.units(EXTRACTOR).amount < 1 and not bot.already_pending(EXTRACTOR) and bot.can_afford(EXTRACTOR):
             bot.log("Building extractor #1")
             drone = bot.workers.random
             target = bot.state.vespene_geyser.closest_to(drone.position)
             await bot.do_actions([drone.build(EXTRACTOR, target)])
+    if bot.units(SPAWNINGPOOL).ready.exists:
         if not (bot.units(LAIR).exists or bot.already_pending(LAIR)) and random_townhall.noqueue:
             if bot.can_afford(LAIR):
                 bot.log("Building lair")
@@ -38,4 +39,5 @@ async def begin_projects(bot):
             target = bot.state.vespene_geyser.closest_to(drone.position)
             await bot.do_actions([drone.build(EXTRACTOR, target)])
 
-        await build(bot, EVOLUTIONCHAMBER)
+        if len(bot.townhalls) > 1:
+            await build(bot, EVOLUTIONCHAMBER)
