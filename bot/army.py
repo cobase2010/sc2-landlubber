@@ -4,7 +4,7 @@ import random
 def nearest_enemy_building(rally, enemy_structures, enemy_start_locations):
     if enemy_structures.exists:
         return enemy_structures.closest_to(rally).position
-    return enemy_start_locations.closest_to(rally)
+    return rally.closest(enemy_start_locations)
 
 
 # Attack to enemy base
