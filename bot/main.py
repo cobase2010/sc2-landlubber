@@ -44,6 +44,23 @@ class MyBot(sc2.BotAI):
             self.log("This base seems to have many ramps, hard to tell where to rally", logging.ERROR)
             self.hq_army_rally_point = self.start_location.towards(self.game_info.map_center, 10)
 
+    def print_score(self):
+        s = self.state.score
+        self.log("score  unit stru   minerals    gas      rate     idle")
+        self.log("{:5} {:5.0f} {:4.0f} {:5.0f}/{:5.0f} {:3.0f}/{:3.0f} {:4.0f}/{:3.0f} {:.0f}/{:.0f}".format(
+            s.score,
+            s.total_value_units,
+            s.total_value_structures,
+            s.spent_minerals,
+            s.collected_minerals,
+            s.spent_vespene,
+            s.collected_vespene,
+            s.collection_rate_minerals,
+            s.collection_rate_vespene,
+            s.idle_worker_time,
+            s.idle_production_time
+        ))
+
     def on_start(self):
         self.score_logged = False
         self.active_scout_tag = None
@@ -94,23 +111,8 @@ class MyBot(sc2.BotAI):
         if self.state.action_errors:
             self.log(self.state.action_errors, logging.ERROR)
 
-        if not self.score_logged and self.time > 300 and self.time < 305:
-            self.score_logged = True
-            s = self.state.score
-            self.log("score unit stru minerals  gas     rate     idle")
-            self.log("{:5} {:4.0f} {:4.0f} {:4.0f}/{:4.0f} {:3.0f}/{:3.0f} {:4.0f}/{:3.0f} {:.1f}/{:.1f}".format(
-                s.score,
-                s.total_value_units,
-                s.total_value_structures,
-                s.spent_minerals,
-                s.collected_minerals,
-                s.spent_vespene,
-                s.collected_vespene,
-                s.collection_rate_minerals,
-                s.collection_rate_vespene,
-                s.idle_worker_time,
-                s.idle_production_time
-            ))
+        if self.time in [300, 600, 900, 1145]:
+            self.print_score()
 
         # Computationally heavy calculations that may cause step timeout unless handled separately
         if not self.init_calculation_done:
