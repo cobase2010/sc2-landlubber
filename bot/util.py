@@ -1,4 +1,4 @@
 import random
 
-def probability(self, percent=50):
+def probability(percent):
     return random.randrange(100) < percent
