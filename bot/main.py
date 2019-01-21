@@ -63,6 +63,7 @@ class MyBot(sc2.BotAI):
 
     def on_start(self):
         self.score_logged = False
+        self.active_expansion_builder = None
         self.active_scout_tag = None
         self.attempted_scouting_enemy_start_locations = False
         self.expansions_sorted = []

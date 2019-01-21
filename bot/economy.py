@@ -3,10 +3,10 @@ from sc2.constants import *
 import bot.util as util
 
 HATCHERY_COST = 300
-HATCHERY_COST_BUFFER_INCREMENT = 90
-EXPANSION_DRONE_THRESHOLD = 0.90
-MAX_NUMBER_OF_DRONES = 48
-DRONE_TRAINING_PROBABILITY_AT_EXPANSIONS = 70
+HATCHERY_COST_BUFFER_INCREMENT = 50
+EXPANSION_DRONE_THRESHOLD = 0.80
+MAX_NUMBER_OF_DRONES = 70
+DRONE_TRAINING_PROBABILITY_AT_EXPANSIONS = 80
 
 
 def global_drone_rate(townhalls):
@@ -20,11 +20,12 @@ def global_drone_rate(townhalls):
     return assigned_drones / ideal_drone_count
 
 
-def should_build_hatchery(townhalls, minerals, expansions_sorted):
-    if not townhalls.not_ready:
-        if global_drone_rate(townhalls) >= EXPANSION_DRONE_THRESHOLD and len(expansions_sorted) > 0:
-            if minerals >= HATCHERY_COST + (HATCHERY_COST_BUFFER_INCREMENT * len(townhalls)):
-                return True
+def should_build_hatchery(bot):
+    if not bot.townhalls.not_ready and not bot.units.find_by_tag(bot.active_expansion_builder):
+        if len(bot.units(QUEEN)) >= len(bot.townhalls):
+            if global_drone_rate(bot.townhalls) >= EXPANSION_DRONE_THRESHOLD and len(bot.expansions_sorted) > 0:
+                if bot.minerals >= HATCHERY_COST + (HATCHERY_COST_BUFFER_INCREMENT * len(bot.townhalls)):
+                    return True
     return False
 
 

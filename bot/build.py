@@ -14,7 +14,9 @@ async def begin_projects(bot):
 
     if economy.should_build_hatchery(bot):
         bot.log("Building hatchery")
-        await bot.build(HATCHERY, bot.expansions_sorted.pop(0))  # TODO Should not be so naive that sites are available and building will succeed and remain intact
+        drone = bot.workers.random
+        bot.active_expansion_builder = drone.tag
+        await bot.do_actions([drone.build(HATCHERY, bot.expansions_sorted.pop(0))]) # TODO Should not be so naive that sites are available and building will succeed and remain intact
 
     await build(bot, SPAWNINGPOOL)
 
