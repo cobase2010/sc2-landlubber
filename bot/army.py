@@ -6,9 +6,9 @@ ARMY_SIZE_TIME_MULTIPLIER = 3
 ARMY_SIZE_MAX = 180
 
 def get_army_strength(units):
-    single_food = units(ZERGLING).ready.amount
+    half_food = units(ZERGLING).ready.amount
     double_food = units(ROACH).ready.amount
-    return single_food + (2 * double_food)
+    return (0.5 * half_food) + (2 * double_food)
 
 
 def nearest_enemy_building(rally, enemy_structures, enemy_start_locations):
