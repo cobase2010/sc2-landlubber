@@ -94,7 +94,7 @@ class MyBot(sc2.BotAI):
             if self.units(OVERLORD).amount == 1:
                 cap_safety_buffer = 0
             else:
-                cap_safety_buffer = 1 * len(self.townhalls)
+                cap_safety_buffer = 2 * len(self.townhalls.ready)
             should = self.supply_left <= cap_safety_buffer and self.supply_cap != self.last_cap_covered and self.supply_cap < 200
             return should
 
