@@ -139,7 +139,15 @@ class MyBot(sc2.BotAI):
                 await self.do_actions(actions)
             return
 
-        actions += army.get_army_actions(iteration, forces.idle, self.hq_army_rally_point, self.known_enemy_structures, self.enemy_start_locations)
+        actions += army.get_army_actions(
+            iteration,
+            forces.idle,
+            self.hq_army_rally_point,
+            self.known_enemy_structures,
+            self.enemy_start_locations,
+            self.units,
+            self.time,
+            self.supply_used)
         actions += army.patrol_with_overlords(overlords, self.hq_army_rally_point, self.start_location)
 
         # Hatchery rally points

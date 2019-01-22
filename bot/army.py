@@ -1,4 +1,13 @@
 import random
+from sc2.constants import *
+
+ARMY_SIZE_BASE_LEVEL = 5
+ARMY_SIZE_TIME_MULTIPLIER = 3
+
+def get_army_strength(units):
+    single_food = units(ZERGLING).ready.amount
+    double_food = units(ROACH).ready.amount
+    return single_food + (2 * double_food)
 
 
 def nearest_enemy_building(rally, enemy_structures, enemy_start_locations):
@@ -9,11 +18,14 @@ def nearest_enemy_building(rally, enemy_structures, enemy_start_locations):
 
 # Attack to enemy base
 # TODO rally first near enemy base/expansion, and then attack with a larger force
-def get_army_actions(iteration, forces, rally, enemy_structures, enemy_start_locations):
+def get_army_actions(iteration, forces, rally, enemy_structures, enemy_start_locations, units, time, supply_used):
     actions = []
-    if len(forces) > 50 and iteration % 50 == 0:
-        for unit in forces:
-            actions.append(unit.attack(nearest_enemy_building(rally, enemy_structures, enemy_start_locations)))
+    if iteration % 30 == 0:
+        strength = get_army_strength(units)
+        enough = (ARMY_SIZE_BASE_LEVEL + ((time / 60) * ARMY_SIZE_TIME_MULTIPLIER))
+        if strength >= enough or supply_used:
+            for unit in forces:
+                actions.append(unit.attack(nearest_enemy_building(rally, enemy_structures, enemy_start_locations)))
     return actions
 
 
