@@ -65,7 +65,8 @@ class MyBot(sc2.BotAI):
         self.score_logged = False
         self.active_expansion_builder = None
         self.active_scout_tag = None
-        self.attempted_scouting_enemy_start_locations = False
+        self.enemy_start_locations_not_yet_scouted = []
+        self.enemy_known_base_locations = []
         self.expansions_sorted = []
         self.ramps_distance_sorted = None
         self.init_calculation_done = False
@@ -120,6 +121,9 @@ class MyBot(sc2.BotAI):
             if iteration == 0:
                 self.expansions_sorted = economy.get_expansion_order(self.expansion_locations, self.start_location, self.enemy_start_locations, logger)
             else:
+                self.enemy_start_locations_not_yet_scouted = self.enemy_start_locations
+                if len(self.enemy_start_locations) == 1:
+                    self.enemy_known_base_locations.append(self.enemy_start_locations[0])
                 self.set_hq_army_rally_point()
                 self.init_calculation_done = True
             return
@@ -203,13 +207,19 @@ class MyBot(sc2.BotAI):
                 self.log("Assigned a new scout " + str(scout.tag), logging.DEBUG)
         if scout:
             if scout.is_idle:
-                if not self.attempted_scouting_enemy_start_locations:
-                    targets = self.enemy_start_locations
-                    self.attempted_scouting_enemy_start_locations = True
+                if self.enemy_start_locations_not_yet_scouted:
+                    targets = self.enemy_start_locations_not_yet_scouted
                 else:
                     targets = self.expansions_sorted
                 for location in targets:
                     actions.append(scout.move(location, queue=True))
+
+        if self.enemy_start_locations_not_yet_scouted and iteration % 10 == 0:
+            for i, base in enumerate(self.enemy_start_locations_not_yet_scouted):
+                if self.units.closest_distance_to(base) < 10:
+                    self.enemy_start_locations_not_yet_scouted.pop(i)
+                    if self.known_enemy_structures.closest_distance_to(base) < 20:
+                        self.enemy_known_base_locations.append(base)
 
         # Reacting to enemy movement
         if self.known_enemy_units and iteration % 10 == 0:

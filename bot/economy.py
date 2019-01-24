@@ -42,9 +42,9 @@ def get_town_with_free_jobs(townhalls, excluded=None):
 
 def get_expansion_order(expansion_locations, start_location, enemy_start_locations, logger):
     exps = expansion_locations  # Fetching this property takes 1.6 seconds after which it is cached forever
-    del exps[start_location]
+    exps.pop(start_location)
     for enemy in enemy_start_locations:
-        del exps[enemy]
+        exps.pop(enemy)
     sorted = start_location.sort_by_distance(exps)
     if len(enemy_start_locations) != 1:
         logger.error("There are more than one enemy start location in this map! Assumptions might fail" + str(len(enemy_start_locations)))
