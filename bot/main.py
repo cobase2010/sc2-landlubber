@@ -108,8 +108,16 @@ class MyBot(sc2.BotAI):
                 mineral = economy.get_closest_mineral_for_hatchery(self.state.mineral_field(), new_town)
                 await self.do_actions([drone.gather(mineral)])
 
-    # MAIN LOOP =========================================================================
+
     async def on_step(self, iteration):
+        await self.main_loop(iteration)
+        # try:
+        # except Exception as e:
+        #     print("ONLY SUCKERS CRASH!", e)
+
+
+    # MAIN LOOP =========================================================================
+    async def main_loop(self, iteration):
         if self.state.action_errors:
             self.log(self.state.action_errors, logging.ERROR)
 
@@ -218,7 +226,7 @@ class MyBot(sc2.BotAI):
             for i, base in enumerate(self.enemy_start_locations_not_yet_scouted):
                 if self.units.closest_distance_to(base) < 10:
                     self.enemy_start_locations_not_yet_scouted.pop(i)
-                    if self.known_enemy_structures.closest_distance_to(base) < 20:
+                    if self.known_enemy_structures and self.known_enemy_structures.closest_distance_to(base) < 20:
                         self.enemy_known_base_locations.append(base)
 
         # Reacting to enemy movement
@@ -228,27 +236,7 @@ class MyBot(sc2.BotAI):
                 self.known_enemy_race = self.known_enemy_units[0].race
                 self.log("Enemy is now known to be " + str(self.known_enemy_race))
 
-            # Base defend
-            for town in self.townhalls:
-                enemies_approaching = self.known_enemy_units.closer_than(30, town)
-                if enemies_approaching:
-                    if len(enemies_approaching) == 1:
-                        self.log("Enemy is probably scouting our base", logging.DEBUG)
-                    if enemies_approaching(DRONE) | enemies_approaching(PROBE) | enemies_approaching(SCV):
-                        self.log("Enemy harvester in our base!", logging.DEBUG)
-                    else:
-                        self.log("Enemy in our base!", logging.DEBUG)
-                enemies_dangerously_near = self.known_enemy_units.closer_than(15, town)
-                if enemies_dangerously_near:
-                    aggressor = enemies_dangerously_near.first
-                    defenders = forces.idle.closer_than(30, aggressor)
-                    if defenders:
-                        for unit in defenders:
-                            actions.append(unit.attack(aggressor.position))  # Attack the position, not the unit to avoid being drawn too far
-                    else:
-                        if self.time < 180: # Worker rush
-                            for drone in self.units(DRONE):
-                                actions.append(drone.attack(aggressor.position))
+            actions += army.base_defend(self, forces)
 
         # Warnings
         if self.vespene > 1000 and iteration % 40 == 0:

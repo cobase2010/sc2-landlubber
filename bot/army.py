@@ -1,4 +1,5 @@
 import random
+import logging
 from sc2.constants import *
 
 ARMY_SIZE_BASE_LEVEL = 5
@@ -39,4 +40,38 @@ def patrol_with_overlords(overlords, rally, start_location):
         else:
             patrol = start_location.random_on_distance(random.randrange(20, 30))
         actions.append(overlord.move(patrol))
+    return actions
+
+
+def is_worker_rush(bot, town, enemies_approaching):
+    enemies = enemies_approaching.closer_than(10, town)
+    worker_enemies = enemies(DRONE) | enemies(PROBE) | enemies(SCV)
+    if worker_enemies.amount > 1 and (worker_enemies.amount / enemies.amount) >= 0.8:
+        return True
+    return False
+
+
+# Base defend
+def base_defend(bot, forces):
+    actions = []
+    for town in bot.townhalls:
+        enemies = bot.known_enemy_units.closer_than(20, town)
+        if enemies:
+            enemy = enemies.closest_to(town)
+            defenders = forces.idle.closer_than(40, town)
+            if defenders:
+                bot.log(f"Defending our base with {defenders.amount} units against {enemies.amount} enemies", logging.INFO)
+                for unit in defenders:
+                    actions.append(unit.attack(enemy.position))  # Attack the position, not the unit, to avoid being lured
+            else:
+                bot.log(f"Enemy attacking our base with {enemies.amount} units but no defenders left!", logging.WARNING)
+
+            if is_worker_rush(bot, town, enemies):
+                bot.log("We are being worker rushed!", logging.WARNING)
+                for drone in bot.units(DRONE).closer_than(60, town):
+                    actions.append(drone.attack(enemy.position))
+
+            if len(enemies) == 1:
+                bot.log("Enemy is probably scouting our base", logging.DEBUG)
+
     return actions

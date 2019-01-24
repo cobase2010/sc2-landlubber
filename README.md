@@ -9,6 +9,18 @@ Forked from [Overmind-Challenge-Template](https://gitlab.com/overmind-challenge/
 
 - [python-sc2](https://github.com/Dentosal/python-sc2/)
 
+## Level
+
+The bot wins all races some of the time against Difficulty.Harder (called "Very Hard" in-game) and all the time against Difficulty.Hard (called "Harder" in-game). Zerg seems to be the easiest.
+
+Usual score at 5/10/19 minutes game time:
+
+    5.0 59/60   score unit  stru minerals    gas       rate     idle
+    5.0 59/60   6363  3500  1075 4325/ 4335  550/1028  1287/313 0/2361
+    10.0 115/130 10914 13450 1375 13875/13940 2600/2624 2519/335 0/10882
+    19.1 169/192 16348 36400 1675 34950/36660 4475/4488 1847/0   3435/64582
+
+
 ## Rules
 
 - The competition will use [the official SEUL rules](https://seul.fi/e-urheilu/pelisaannot/turnaussaannot-starcraft-ii/#english-version) where applicable
