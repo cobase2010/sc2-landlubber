@@ -148,9 +148,10 @@ class MyBot(sc2.BotAI):
             if not self.hq_loss_handled:
                 self.hq_loss_handled = True
                 self.log("All townhalls lost, loss is probably imminent!", logging.WARNING)
-                for unit in self.units(DRONE) | self.units(QUEEN) | forces:
-                    actions.append(unit.attack(self.enemy_start_locations[0]))
-                await self.do_actions(actions)
+                if self.enemy_start_locations:
+                    for unit in self.units(DRONE) | self.units(QUEEN) | forces:
+                        actions.append(unit.attack(self.enemy_start_locations[0]))
+                    await self.do_actions(actions)
             return
 
         actions += army.get_army_actions(
