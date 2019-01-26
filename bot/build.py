@@ -5,7 +5,7 @@ import bot.economy as economy
 async def build_one(bot, it):
     if not (bot.units(it).exists or bot.already_pending(it)) and bot.can_afford(it):
         bot.log(f"Building {it}")
-        await bot.build(it, near=bot.townhalls.first)
+        await bot.build(it, near=bot.townhalls.first.position.towards(bot._game_info.map_center, 5))
 
 
 async def ensure_extractors(bot):

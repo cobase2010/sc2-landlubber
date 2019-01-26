@@ -44,7 +44,7 @@ def patrol_with_overlords(overlords, rally, start_location):
 
 
 def is_worker_rush(bot, town, enemies_approaching):
-    enemies = enemies_approaching.closer_than(10, town)
+    enemies = enemies_approaching.closer_than(6, town)
     worker_enemies = enemies(DRONE) | enemies(PROBE) | enemies(SCV)
     if worker_enemies.amount > 1 and (worker_enemies.amount / enemies.amount) >= 0.8:
         return True
