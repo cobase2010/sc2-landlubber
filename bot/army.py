@@ -1,6 +1,7 @@
 import random
 import logging
 from sc2.constants import *
+# import bot.headless_render as headless
 
 ARMY_SIZE_BASE_LEVEL = 5
 ARMY_SIZE_TIME_MULTIPLIER = 3
@@ -21,21 +22,6 @@ def nearest_enemy_building(rally, enemy_structures, enemy_start_locations):
     return rally.closest(enemy_start_locations)
 
 
-def debug_army(bot, forces_idle):
-    if forces_idle:
-        army_distance = bot.hq_front_door.distance_to(forces_idle.center)
-        marching_left = forces_idle.center.distance_to(bot.army_attack_point)
-    else:
-        army_distance = -100.0
-        marching_left = -100.0
-    print("{:4.1f} {:4.1f} {:4.1f} {:4.1f}".format(
-        bot.hq_front_door.distance_to(bot.army_attack_point),
-        bot.hq_front_door.distance_to(bot.army_spawn_rally_point),
-        army_distance,
-        marching_left
-    ))
-
-
 # Attack to enemy base
 def get_army_actions(bot, iteration, forces_idle, enemy_structures, enemy_start_locations, units, time, supply_used):
     actions = []
@@ -54,11 +40,10 @@ def get_army_actions(bot, iteration, forces_idle, enemy_structures, enemy_start_
         if towards:
             bot.army_attack_point = bot.army_attack_point.towards(towards, ARMY_MOVEMENT_NEXT_MARCH_DISTANCE)
             bot.army_spawn_rally_point = bot.army_attack_point.towards(bot.townhalls.first, 20)
+        # headless.render_army(bot, forces_idle)
 
     for unit in forces_idle:
         actions.append(unit.attack(bot.army_attack_point))
-
-    debug_army(bot, forces_idle)
 
     return actions
 
