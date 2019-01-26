@@ -24,7 +24,7 @@ MAX_BASE_DOOR_RANGE = 30
 
 
 class MyBot(sc2.BotAI):
-    def set_hq_army_rally_point(self):
+    def guess_front_door(self):
         # Bot has main_base_ramp but it sometimes points to the back door ramp if base has multiple ramps
         self.ramps_distance_sorted = sorted(self._game_info.map_ramps, key=lambda ramp: ramp.top_center.distance_to(self.start_location))
         doors = []
@@ -32,17 +32,17 @@ class MyBot(sc2.BotAI):
             if ramp.top_center.distance_to(self.start_location) <= MAX_BASE_DOOR_RANGE:
                 doors.append(ramp)
         if len(doors) == 1:
-            self.hq_army_rally_point = doors[0].top_center
             self.log("This base seems to have only one ramp")
+            return doors[0].top_center
         elif len(doors) == 2:
             self.log("This base seems to have two ramps, let's make a guess and rally at the smaller one", logging.WARNING)
             if doors[0].size < doors[1].size:
-                self.hq_army_rally_point = doors[0].top_center
+                return doors[0].top_center
             else:
-                self.hq_army_rally_point = doors[1].top_center
+                return doors[1].top_center
         else:
             self.log("This base seems to have many ramps, hard to tell where to rally", logging.ERROR)
-            self.hq_army_rally_point = self.start_location.towards(self.game_info.map_center, 10)
+            return self.start_location.towards(self.game_info.map_center, 10)
 
     def print_score(self):
         s = self.state.score
@@ -71,8 +71,10 @@ class MyBot(sc2.BotAI):
         self.ramps_distance_sorted = None
         self.init_calculation_done = False
         self.last_cap_covered = 0
-        self.hq_army_rally_point = None
         self.hq_loss_handled = False
+        self.hq_front_door = None
+        self.army_attack_point = None
+        self.army_spawn_rally_point = None
         if self.enemy_race != Race.Random:
             self.known_enemy_race = self.enemy_race
         else:
@@ -132,7 +134,9 @@ class MyBot(sc2.BotAI):
                 self.enemy_start_locations_not_yet_scouted = self.enemy_start_locations
                 if len(self.enemy_start_locations) == 1:
                     self.enemy_known_base_locations.append(self.enemy_start_locations[0])
-                self.set_hq_army_rally_point()
+                self.hq_front_door = self.guess_front_door()
+                self.army_attack_point = self.hq_front_door
+                self.army_spawn_rally_point = self.hq_front_door
                 self.init_calculation_done = True
             return
 
@@ -155,20 +159,20 @@ class MyBot(sc2.BotAI):
             return
 
         actions += army.get_army_actions(
+            self,
             iteration,
             forces.idle,
-            self.hq_army_rally_point,
             self.known_enemy_structures,
             self.enemy_start_locations,
             self.units,
             self.time,
             self.supply_used)
-        actions += army.patrol_with_overlords(overlords, self.hq_army_rally_point, self.start_location)
+        actions += army.patrol_with_overlords(overlords, self.hq_front_door, self.start_location)
 
         # Hatchery rally points
-        if iteration % 100 == 0:
+        if iteration % 10 == 0:
             for hatch in self.townhalls:
-                actions.append(hatch(RALLY_HATCHERY_UNITS, self.hq_army_rally_point))
+                actions.append(hatch(RALLY_HATCHERY_UNITS, self.army_spawn_rally_point))
                 if not hatch.is_ready:
                     actions.append(hatch(RALLY_HATCHERY_WORKERS, economy.get_closest_mineral_for_hatchery(self.state.mineral_field(), hatch)))
 
