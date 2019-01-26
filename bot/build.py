@@ -47,3 +47,6 @@ async def begin_projects(bot):
     if bot.units(ROACHWARREN).ready.exists:
         if len(bot.townhalls) > 1:
             await build_one(bot, EVOLUTIONCHAMBER)
+
+    if bot.units(LAIR).ready.exists and len(bot.townhalls.ready) > 1:
+        await build_one(bot, SPIRE)

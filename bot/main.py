@@ -138,7 +138,9 @@ class MyBot(sc2.BotAI):
 
         larvae = self.units(LARVA)
         overlords = self.units(OVERLORD)
-        forces = self.units(ZERGLING) | self.units(ROACH) | self.units(HYDRALISK)
+        forces = self.units(ZERGLING) | self.units(ROACH) | self.units(HYDRALISK) | self.units(MUTALISK)
+        forces_ground = self.units(ZERGLING) | self.units(ROACH) | self.units(HYDRALISK)
+        forces_air = self.units(MUTALISK)
         actions = []
 
         # Kamikaze if all bases lost
@@ -184,13 +186,16 @@ class MyBot(sc2.BotAI):
                 elif economy.should_train_drone(self, townhall):
                     self.log("Training drone, current situation at this expansion {}/{}".format(townhall.assigned_harvesters, townhall.ideal_harvesters), logging.DEBUG)
                     actions.append(larva.train(DRONE))
-                elif self.units(ROACHWARREN).ready.exists:
-                    if self.can_afford(ROACH):
+                else:
+                    if self.can_afford(MUTALISK) and self.units(SPIRE).ready.exists:
+                        actions.append(larva.train(MUTALISK))
+                        self.log("Training mutalisk", logging.DEBUG)
+                    elif self.can_afford(ROACH) and self.units(ROACHWARREN).ready.exists:
                         actions.append(larva.train(ROACH))
                         self.log("Training roach", logging.DEBUG)
-                elif self.can_afford(ZERGLING):
-                    self.log("Training ling", logging.DEBUG)
-                    actions.append(larva.train(ZERGLING))
+                    elif self.can_afford(ZERGLING) and self.units(SPAWNINGPOOL).ready.exists:
+                        self.log("Training ling", logging.DEBUG)
+                        actions.append(larva.train(ZERGLING))
             if self.units(SPAWNINGPOOL).ready.exists and townhall.is_ready and townhall.noqueue:
                 if self.can_afford(QUEEN):
                     if not self.units(QUEEN).closer_than(10, townhall):

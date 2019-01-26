@@ -8,7 +8,7 @@ ARMY_SIZE_MAX = 180
 
 def get_army_strength(units):
     half_food = units(ZERGLING).ready.amount
-    double_food = units(ROACH).ready.amount
+    double_food = units(ROACH).ready.amount + units(MUTALISK).ready.amount
     return (0.5 * half_food) + (2 * double_food)
 
 
