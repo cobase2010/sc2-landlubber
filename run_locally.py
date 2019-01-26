@@ -4,6 +4,17 @@ from sc2 import run_game, maps, Race, Difficulty
 from sc2.player import Bot, Computer
 from bot import MyBot
 
+def pick_map(all_maps=False):
+    if all_maps:
+        return random.choice(maps.get())
+    else:
+        mapset = [
+            "(2)DreamcatcherLE",
+            "(2)LostandFoundLE",
+            "(2)RedshiftLE"
+        ]
+        return maps.get(random.choice(mapset))
+
 
 def main():
     with open("botinfo.json") as f:
@@ -11,7 +22,7 @@ def main():
     race = Race[info["race"]]
 
     run_game(
-        random.choice(maps.get()),
+        pick_map(),
         [
             Bot(race, MyBot()),
             Computer(Race.Random, Difficulty.Harder)
