@@ -188,9 +188,6 @@ class MyBot(sc2.BotAI):
                     if self.can_afford(ROACH):
                         actions.append(larva.train(ROACH))
                         self.log("Training roach", logging.DEBUG)
-                    elif self.can_afford(ZERGLING):
-                        self.log("Training ling", logging.DEBUG)
-                        actions.append(larva.train(ZERGLING))
                 elif self.can_afford(ZERGLING):
                     self.log("Training ling", logging.DEBUG)
                     actions.append(larva.train(ZERGLING))
