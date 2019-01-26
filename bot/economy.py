@@ -9,7 +9,7 @@ MAX_NUMBER_OF_DRONES = 70
 DRONE_TRAINING_PROBABILITY_AT_EXPANSIONS = 90
 
 
-def global_drone_rate(townhalls):
+def drone_rate_for_towns(townhalls):
     assigned_drones = 0
     ideal_drone_count = 0
     for town in townhalls:
@@ -23,7 +23,7 @@ def global_drone_rate(townhalls):
 def should_build_hatchery(bot):
     if not bot.townhalls.not_ready and not bot.units.find_by_tag(bot.active_expansion_builder):
         if len(bot.units(QUEEN)) >= len(bot.townhalls):
-            if global_drone_rate(bot.townhalls) >= EXPANSION_DRONE_THRESHOLD and len(bot.expansions_sorted) > 0:
+            if drone_rate_for_towns(bot.townhalls) >= EXPANSION_DRONE_THRESHOLD and len(bot.expansions_sorted) > 0:
                 if bot.minerals >= HATCHERY_COST + (HATCHERY_COST_BUFFER_INCREMENT * len(bot.townhalls)):
                     return True
     return False
