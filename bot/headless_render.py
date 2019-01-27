@@ -1,7 +1,7 @@
 # import emoji
 from sc2.constants import *
 
-DRAW_WIDTH = 140
+DRAW_WIDTH = 80
 
 class color:
     GREEN = '\033[92m'

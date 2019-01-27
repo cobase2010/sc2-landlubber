@@ -1,3 +1,4 @@
+import logging
 from sc2.constants import *
 import bot.economy as economy
 
@@ -21,6 +22,14 @@ async def ensure_extractors(bot):
                             await bot.do_actions([worker.build(EXTRACTOR, geyser)])
                             return
 
+def should_train_overlord(bot):
+    if bot.can_afford(OVERLORD):
+        if bot.units(OVERLORD).amount == 1:
+            cap_safety_buffer = 0
+        else:
+            cap_safety_buffer = 2 * len(bot.townhalls.ready)
+        should = bot.supply_left <= cap_safety_buffer and bot.supply_cap != bot.last_cap_covered and bot.supply_cap < 200
+        return should
 
 # Build tree
 async def begin_projects(bot):
@@ -50,3 +59,37 @@ async def begin_projects(bot):
 
     if bot.units(LAIR).ready.exists and len(bot.townhalls.ready) > 1:
         await build_one(bot, SPIRE)
+
+
+# Training units
+def train_units(bot, larvae):
+    actions = []
+    for townhall in bot.townhalls:
+        town_larvae = larvae.closer_than(5, townhall)
+        # TODO This currently trains one unit and one or more buildings per cycle.
+        # Should we while loop larvae? Or should we only build max one building per cycle?
+        if town_larvae.exists:
+            larva = town_larvae.random
+            if should_train_overlord(bot):
+                bot.log("Training overlord", logging.DEBUG)
+                actions.append(larva.train(OVERLORD))
+                bot.last_cap_covered = bot.supply_cap
+            elif economy.should_train_drone(bot, townhall):
+                bot.log("Training drone, current situation at this expansion {}/{}".format(townhall.assigned_harvesters, townhall.ideal_harvesters), logging.DEBUG)
+                actions.append(larva.train(DRONE))
+            else:
+                if bot.can_afford(MUTALISK) and bot.units(SPIRE).ready.exists:
+                    actions.append(larva.train(MUTALISK))
+                    bot.log("Training mutalisk", logging.DEBUG)
+                elif bot.can_afford(ROACH) and bot.units(ROACHWARREN).ready.exists:
+                    actions.append(larva.train(ROACH))
+                    bot.log("Training roach", logging.DEBUG)
+                elif bot.can_afford(ZERGLING) and bot.units(SPAWNINGPOOL).ready.exists:
+                    bot.log("Training ling", logging.DEBUG)
+                    actions.append(larva.train(ZERGLING))
+        if bot.units(SPAWNINGPOOL).ready.exists and townhall.is_ready and townhall.noqueue:
+            if bot.can_afford(QUEEN):
+                if not bot.units(QUEEN).closer_than(10, townhall):
+                    bot.log("Training queen", logging.INFO)
+                    actions.append(townhall.train(QUEEN))
+    return actions

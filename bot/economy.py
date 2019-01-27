@@ -56,6 +56,17 @@ def get_expansion_order(expansion_locations, start_location, enemy_start_locatio
     return sorted
 
 
+async def reassign_overideal_drones(bot):
+    for old_town in bot.townhalls:
+        if old_town.assigned_harvesters > old_town.ideal_harvesters:
+            drone = get_reassignable_drone(old_town, bot.workers)
+            new_town = get_town_with_free_jobs(bot.townhalls, old_town)
+            if new_town and drone:
+                bot.log("Reassigning drone from overcrowded town", logging.DEBUG)
+                mineral = get_closest_mineral_for_hatchery(bot.state.mineral_field(), new_town)
+                await bot.do_actions([drone.gather(mineral)])
+
+
 def get_reassignable_drone(town, workers):
     workers = workers.closer_than(10, town)
     for worker in workers:

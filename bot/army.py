@@ -3,12 +3,13 @@ import logging
 from sc2.constants import *
 # import bot.headless_render as headless
 
+MAX_BASE_DOOR_RANGE = 30
 ARMY_SIZE_BASE_LEVEL = 5
 ARMY_SIZE_TIME_MULTIPLIER = 3
 ARMY_SIZE_MAX = 180
-
 ARMY_MOVEMENT_NEXT_MARCH_DISTANCE = 5
 ARMY_MOVEMENT_REGROUP_RANGE = 15
+
 
 def get_simple_army_strength(units):
     half_food = units(ZERGLING).ready.amount
@@ -20,6 +21,27 @@ def nearest_enemy_building(rally, enemy_structures, enemy_start_locations):
     if enemy_structures.exists:
         return enemy_structures.closest_to(rally).position
     return rally.closest(enemy_start_locations)
+
+
+def guess_front_door(bot):
+    # Bot has main_base_ramp but it sometimes points to the back door ramp if base has multiple ramps
+    bot.ramps_distance_sorted = sorted(bot._game_info.map_ramps, key=lambda ramp: ramp.top_center.distance_to(bot.start_location))
+    doors = []
+    for ramp in bot.ramps_distance_sorted:
+        if ramp.top_center.distance_to(bot.start_location) <= MAX_BASE_DOOR_RANGE:
+            doors.append(ramp)
+    if len(doors) == 1:
+        bot.log("This base seems to have only one ramp")
+        return doors[0].top_center
+    elif len(doors) == 2:
+        bot.log("This base seems to have two ramps, let's make a guess and rally at the smaller one", logging.WARNING)
+        if doors[0].size < doors[1].size:
+            return doors[0].top_center
+        else:
+            return doors[1].top_center
+    else:
+        bot.log("This base seems to have many ramps, hard to tell where to rally", logging.ERROR)
+        return bot.start_location.towards(bot.game_info.map_center, 10)
 
 
 # Attack to enemy base
