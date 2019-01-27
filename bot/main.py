@@ -38,6 +38,7 @@ class MyBot(sc2.BotAI):
         self.last_cap_covered = 0
         self.hq_loss_handled = False
         self.hq_front_door = None
+        self.hq_scout_found_front_door = False
         self.army_attack_point = None
         self.army_spawn_rally_point = None
         if self.enemy_race != Race.Random:
@@ -128,7 +129,11 @@ class MyBot(sc2.BotAI):
                 if self.units(ZERGLING).ready.exists:
                     scout = self.units(ZERGLING).ready.first
                     self.active_scout_tag = scout.tag
-                    self.log("Assigned a new scout " + str(scout.tag), logging.DEBUG)
+                    self.log("Assigned a new zergling scout " + str(scout.tag), logging.INFO)
+                elif self.units(ROACHWARREN).exists and self.units(DRONE).ready.exists:
+                    scout = self.units(DRONE).ready.random
+                    self.active_scout_tag = scout.tag
+                    self.log("Assigned a new drone scout " + str(scout.tag), logging.INFO)
             if scout:
                 if scout.is_idle:
                     if self.enemy_start_locations_not_yet_scouted:
@@ -137,6 +142,13 @@ class MyBot(sc2.BotAI):
                         targets = self.expansions_sorted
                     for location in targets:
                         actions.append(scout.move(location, queue=True))
+                else:
+                    if not self.hq_scout_found_front_door:
+                        for ramp in self._game_info.map_ramps:
+                            if scout.distance_to(ramp.top_center) < 5:
+                                self.hq_scout_found_front_door = True
+                                self.hq_front_door = ramp.top_center
+                                self.log("Scout verified front door")
 
             if self.enemy_start_locations_not_yet_scouted and iteration % 10 == 0:
                 for i, base in enumerate(self.enemy_start_locations_not_yet_scouted):

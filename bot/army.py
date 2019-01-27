@@ -47,15 +47,10 @@ def guess_front_door(bot):
     if len(doors) == 1:
         bot.log("This base seems to have only one ramp")
         return doors[0].top_center
-    elif len(doors) == 2:
-        bot.log("This base seems to have two ramps, let's make a guess and rally at the smaller one", logging.WARNING)
-        if doors[0].size < doors[1].size:
-            return doors[0].top_center
-        else:
-            return doors[1].top_center
     else:
-        bot.log("This base seems to have many ramps, hard to tell where to rally", logging.ERROR)
-        return bot.start_location.towards(bot.game_info.map_center, 10)
+        bot.log("This base seems to several ramps, let's wait for scout to determine front door", logging.WARNING)
+        return bot.start_location.towards(bot.game_info.map_center, 5)
+
 
 def enemy_is_building_on_our_side_of_the_map(bot):
     if bot.known_enemy_structures:
@@ -63,6 +58,7 @@ def enemy_is_building_on_our_side_of_the_map(bot):
         if bot.start_location.distance_to_closest(bot.known_enemy_structures) < range:
             return True
     return False
+
 
 # Attack to enemy base
 def get_army_actions(bot, iteration, forces_idle, enemy_structures, enemy_start_locations, units, time, supply_used):
@@ -84,7 +80,6 @@ def get_army_actions(bot, iteration, forces_idle, enemy_structures, enemy_start_
             towards = bot.hq_front_door
         if towards:
             bot.army_attack_point = bot.army_attack_point.towards(towards, ARMY_MOVEMENT_NEXT_MARCH_DISTANCE)
-            bot.army_spawn_rally_point = bot.army_attack_point.towards(bot.townhalls.first, 20)
         # headless.render_army(bot, forces_idle)
 
     for unit in forces_idle:
