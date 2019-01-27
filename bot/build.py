@@ -66,8 +66,6 @@ def train_units(bot, larvae):
     actions = []
     for townhall in bot.townhalls:
         town_larvae = larvae.closer_than(5, townhall)
-        # TODO This currently trains one unit and one or more buildings per cycle.
-        # Should we while loop larvae? Or should we only build max one building per cycle?
         if town_larvae.exists:
             larva = town_larvae.random
             if should_train_overlord(bot):
@@ -81,15 +79,16 @@ def train_units(bot, larvae):
                 if bot.can_afford(MUTALISK) and bot.units(SPIRE).ready.exists:
                     actions.append(larva.train(MUTALISK))
                     bot.log("Training mutalisk", logging.DEBUG)
-                elif bot.can_afford(ROACH) and bot.units(ROACHWARREN).ready.exists:
-                    actions.append(larva.train(ROACH))
-                    bot.log("Training roach", logging.DEBUG)
+                elif bot.units(ROACHWARREN).ready.exists:
+                    if bot.can_afford(ROACH):
+                        actions.append(larva.train(ROACH))
+                        bot.log("Training roach", logging.DEBUG)
                 elif bot.can_afford(ZERGLING) and bot.units(SPAWNINGPOOL).ready.exists:
                     bot.log("Training ling", logging.DEBUG)
                     actions.append(larva.train(ZERGLING))
         if bot.units(SPAWNINGPOOL).ready.exists and townhall.is_ready and townhall.noqueue:
             if bot.can_afford(QUEEN):
-                if not bot.units(QUEEN).closer_than(10, townhall):
+                if not bot.units(QUEEN).closer_than(15, townhall):
                     bot.log("Training queen", logging.INFO)
                     actions.append(townhall.train(QUEEN))
     return actions
