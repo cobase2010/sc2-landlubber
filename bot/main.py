@@ -22,6 +22,35 @@ logger.addHandler(handler)
 
 MAX_BASE_DOOR_RANGE = 30
 
+def print_running_speed(bot):
+    elapsed_realtime = time.time() - bot.match_start_time
+    bot.log("real={:.0f}s game={:.0f}s iter={} speed={:.0f}x it/rt={:.0f} it/gt={:.1f}".format(
+        elapsed_realtime,
+        bot.time,
+        iteration,
+        bot.time / elapsed_realtime,
+        iteration / elapsed_realtime,
+        iteration / bot.time
+    ), logging.INFO)
+
+
+def print_score(bot):
+    s = bot.state.score
+    bot.log("score  unit stru   minerals    gas      rate     idle")
+    bot.log("{:5} {:5.0f} {:4.0f} {:5.0f}/{:5.0f} {:3.0f}/{:3.0f} {:4.0f}/{:3.0f} {:.0f}/{:.0f}".format(
+        s.score,
+        s.total_value_units,
+        s.total_value_structures,
+        s.spent_minerals,
+        s.collected_minerals,
+        s.spent_vespene,
+        s.collected_vespene,
+        s.collection_rate_minerals,
+        s.collection_rate_vespene,
+        s.idle_worker_time,
+        s.idle_production_time
+    ))
+
 
 class MyBot(sc2.BotAI):
     def guess_front_door(self):
@@ -44,24 +73,8 @@ class MyBot(sc2.BotAI):
             self.log("This base seems to have many ramps, hard to tell where to rally", logging.ERROR)
             return self.start_location.towards(self.game_info.map_center, 10)
 
-    def print_score(self):
-        s = self.state.score
-        self.log("score  unit stru   minerals    gas      rate     idle")
-        self.log("{:5} {:5.0f} {:4.0f} {:5.0f}/{:5.0f} {:3.0f}/{:3.0f} {:4.0f}/{:3.0f} {:.0f}/{:.0f}".format(
-            s.score,
-            s.total_value_units,
-            s.total_value_structures,
-            s.spent_minerals,
-            s.collected_minerals,
-            s.spent_vespene,
-            s.collected_vespene,
-            s.collection_rate_minerals,
-            s.collection_rate_vespene,
-            s.idle_worker_time,
-            s.idle_production_time
-        ))
-
     def on_start(self):
+        self.match_start_time = time.time()
         self.score_logged = False
         self.active_expansion_builder = None
         self.active_scout_tag = None
@@ -124,7 +137,10 @@ class MyBot(sc2.BotAI):
             self.log(self.state.action_errors, logging.ERROR)
 
         if self.time in [300, 600, 900, 1145]:
-            self.print_score()
+            print_score(self)
+
+        if iteration % 100 == 0 and self.time > 0:
+            print_running_speed(self)
 
         # Computationally heavy calculations that may cause step timeout unless handled separately
         if not self.init_calculation_done:
@@ -246,9 +262,9 @@ class MyBot(sc2.BotAI):
             actions += army.base_defend(self, forces)
 
         # Warnings
-        if self.vespene > 1000 and iteration % 40 == 0:
+        if self.vespene > 600 and iteration % 30 == 0:
             self.log("Too much gas", logging.WARNING)
-        if self.supply_left == 0 and iteration % 40 == 0:
+        if self.supply_left == 0 and iteration % 30 == 0:
             self.log("Not enough overlords!", logging.WARNING)
 
         await self.do_actions(actions)
