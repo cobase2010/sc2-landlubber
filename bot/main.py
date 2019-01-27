@@ -98,7 +98,11 @@ class MyBot(sc2.BotAI):
             self.units,
             self.time,
             self.supply_used)
-        actions += army.patrol_with_overlords(overlords, self.hq_front_door, self.start_location)
+        actions += army.patrol_with_overlords(
+            overlords,
+            self.hq_front_door,
+            self.start_location,
+            self.enemy_start_locations)
 
         # Non-time-critical
         if (self.tick_millis - self.tick_millis_since_last_base_management) >= 500:

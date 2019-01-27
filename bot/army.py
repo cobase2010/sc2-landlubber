@@ -85,13 +85,18 @@ def get_army_actions(bot, iteration, forces_idle, enemy_structures, enemy_start_
 
 
 # Scout home base with overlords
-def patrol_with_overlords(overlords, front_door, start_location):
+def patrol_with_overlords(overlords, front_door, start_location, enemy_start_locations):
     actions = []
     for overlord in overlords.idle:
-        if len(overlords) < 4:
-            patrol = front_door.random_on_distance(random.randrange(1, 5))
+        if len(overlords) == 1:
+            for enemy_loc in enemy_start_locations:
+                actions.append(overlord.move(enemy_loc, queue=True))
+            actions.append(overlord.move(start_location, queue=True))
+            return actions
+        elif len(overlords) < 4:
+            patrol = front_door.random_on_distance(random.randrange(3, 6))
         else:
-            patrol = start_location.random_on_distance(random.randrange(20, 30))
+            patrol = start_location.random_on_distance(30)
         actions.append(overlord.move(patrol))
     return actions
 
