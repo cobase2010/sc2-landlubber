@@ -11,6 +11,20 @@ ARMY_MOVEMENT_NEXT_MARCH_DISTANCE = 5
 ARMY_MOVEMENT_REGROUP_RANGE = 15
 
 
+def kamikaze(bot, forces):
+    if not bot.hq_loss_handled:
+        try:
+            actions = []
+            bot.hq_loss_handled = True
+            bot.log("All townhalls lost, loss is probably imminent!", logging.WARNING)
+            if bot.enemy_start_locations:
+                for unit in bot.units(DRONE) | bot.units(QUEEN) | forces:
+                    actions.append(unit.attack(bot.enemy_start_locations[0]))
+                await bot.do_actions(actions)
+        except Exception as e:
+            print(e)
+
+
 def get_simple_army_strength(units):
     half_food = units(ZERGLING).ready.amount
     double_food = units(ROACH).ready.amount + units(MUTALISK).ready.amount
