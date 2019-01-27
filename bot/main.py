@@ -89,7 +89,7 @@ class MyBot(sc2.BotAI):
         actions = []
 
         if not self.townhalls.exists:
-            army.kamikaze(self, forces)
+            await army.kamikaze(self, forces)
             return
 
         actions += army.get_army_actions(

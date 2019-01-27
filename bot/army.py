@@ -11,7 +11,7 @@ ARMY_MOVEMENT_NEXT_MARCH_DISTANCE = 5
 ARMY_MOVEMENT_REGROUP_RANGE = 15
 
 
-def kamikaze(bot, forces):
+async def kamikaze(bot, forces):
     if not bot.hq_loss_handled:
         try:
             actions = []
