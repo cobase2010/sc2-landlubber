@@ -57,6 +57,12 @@ def guess_front_door(bot):
         bot.log("This base seems to have many ramps, hard to tell where to rally", logging.ERROR)
         return bot.start_location.towards(bot.game_info.map_center, 10)
 
+def enemy_is_building_on_our_side_of_the_map(bot):
+    if bot.known_enemy_structures:
+        range = bot.start_location.distance_to(bot._game_info.map_center)
+        if bot.start_location.distance_to_closest(bot.known_enemy_structures) < range:
+            return True
+    return False
 
 # Attack to enemy base
 def get_army_actions(bot, iteration, forces_idle, enemy_structures, enemy_start_locations, units, time, supply_used):
@@ -64,6 +70,9 @@ def get_army_actions(bot, iteration, forces_idle, enemy_structures, enemy_start_
     if iteration % 10 == 0:
         strength = get_simple_army_strength(units)
         enough = (ARMY_SIZE_BASE_LEVEL + ((time / 60) * ARMY_SIZE_TIME_MULTIPLIER))
+        if enemy_is_building_on_our_side_of_the_map(bot):
+            bot.log("Enemy is building on our side of the map!", logging.WARNING)
+            enough = ARMY_SIZE_BASE_LEVEL
         towards = None
         if (strength >= enough or supply_used > ARMY_SIZE_MAX):
             if forces_idle and forces_idle.center.distance_to(bot.army_attack_point) < ARMY_MOVEMENT_REGROUP_RANGE:
