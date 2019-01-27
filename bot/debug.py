@@ -12,7 +12,7 @@ def print_running_speed(bot, iteration):
             bot.time / elapsed_realtime,
             iteration / elapsed_realtime,
             iteration / bot.time
-        ), logging.INFO)
+        ), logging.DEBUG)
 
 
 def print_score(bot):

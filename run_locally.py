@@ -27,10 +27,10 @@ def main():
             Bot(race, MyBot()),
             Computer(Race.Random, Difficulty.Harder)
         ],
-        realtime=False,
-        step_time_limit=1.7,
+        realtime=True,
+        # step_time_limit=0.1,
         game_time_limit=(60*20),
-        save_replay_as="test.SC2Replay"
+        save_replay_as="latest.SC2Replay"
     )
 
 
