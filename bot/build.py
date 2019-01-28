@@ -27,7 +27,7 @@ def should_train_overlord(bot):
         if bot.units(OVERLORD).amount == 1:
             cap_safety_buffer = 0
         else:
-            cap_safety_buffer = 2 * len(bot.townhalls.ready)
+            cap_safety_buffer = int((bot.townhalls.ready.amount + bot.units(QUEEN).ready.amount) * 0.45 + 2)
         should = bot.supply_left <= cap_safety_buffer and bot.supply_cap != bot.last_cap_covered and bot.supply_cap < 200
         return should
 
