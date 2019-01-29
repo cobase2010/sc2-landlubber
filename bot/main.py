@@ -5,8 +5,9 @@ import sys
 import time
 from sc2 import Race, Difficulty
 from sc2.constants import *
-from sc2.player import Bot, Computer
 from sc2.data import race_townhalls
+from sc2.player import Bot, Computer
+from sc2.position import Point3
 import bot.army as army
 import bot.build as build
 import bot.economy as economy
@@ -51,6 +52,9 @@ class MyBot(sc2.BotAI):
         self.log("Game ended in " + str(result))
         self.log("Score: " + str(self.state.score.score))
 
+    def world_text(self, text, pos):
+        self._client.debug_text_world(text, Point3((pos.position.x, pos.position.y, 10)), None, 14)
+
     def log(self, msg, level=logging.INFO):
         logger.log(level, "{:4.1f} {:3}/{:3} {}".format(self.time / 60, self.supply_used, self.supply_cap, msg))
 
@@ -93,10 +97,11 @@ class MyBot(sc2.BotAI):
         actions += army.get_army_actions(
             self,
             iteration,
-            forces.idle,
+            # TODO we should filter out non-fighting
+            forces, #forces.idle,  # TODO all_units or just idle?
             self.known_enemy_structures,
             self.enemy_start_locations,
-            self.units,
+            self.units,  # TODO all_units or just idle?
             self.time,
             self.supply_used)
         actions += army.patrol_with_overlords(
@@ -172,3 +177,6 @@ class MyBot(sc2.BotAI):
             debug.print_score(self)
             debug.print_running_speed(self, iteration)
             debug.print_warnings_for_unoptimal_play(self)
+
+        self.world_text("door", self.hq_front_door)
+        await self._client.send_debug()

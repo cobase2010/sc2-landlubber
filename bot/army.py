@@ -1,5 +1,6 @@
-import random
 import logging
+import random
+import statistics
 from sc2.constants import *
 # import bot.headless_render as headless
 
@@ -7,8 +8,7 @@ MAX_BASE_DOOR_RANGE = 30
 ARMY_SIZE_BASE_LEVEL = 5
 ARMY_SIZE_TIME_MULTIPLIER = 3
 ARMY_SIZE_MAX = 180
-ARMY_MOVEMENT_NEXT_MARCH_DISTANCE = 5
-ARMY_MOVEMENT_REGROUP_RANGE = 15
+ARMY_DISPERSION_MAX = 8
 
 
 async def kamikaze(bot, forces):
@@ -34,7 +34,7 @@ def get_simple_army_strength(units):
 def nearest_enemy_building(rally, enemy_structures, enemy_start_locations):
     if enemy_structures.exists:
         return enemy_structures.closest_to(rally).position
-    return rally.closest(enemy_start_locations)
+    return rally.closest(enemy_start_locations) # FIXME This crashed to AssertionError position.py L51 assert ps against SystemAbus
 
 
 def guess_front_door(bot):
@@ -60,31 +60,50 @@ def enemy_is_building_on_our_side_of_the_map(bot):
     return False
 
 
+def get_army_dispersion(units, bot, army_mass_center):
+    if units:
+        center = units.center
+        return statistics.median([unit.distance_to(center) for unit in units])
+    else:
+        return 0
+
+
 # Attack to enemy base
-def get_army_actions(bot, iteration, forces_idle, enemy_structures, enemy_start_locations, units, time, supply_used):
+def get_army_actions(bot, iteration, units, enemy_structures, enemy_start_locations, all_units, time, supply_used):
     actions = []
-    if iteration % 10 == 0:
-        strength = get_simple_army_strength(units)
+    if units and iteration % 10 == 0:
+        army_center = units.center
+        bot.world_text("center", army_center)
+        strength = get_simple_army_strength(all_units) # TODO all_units or just idle?
         enough = (ARMY_SIZE_BASE_LEVEL + ((time / 60) * ARMY_SIZE_TIME_MULTIPLIER))
         if enemy_is_building_on_our_side_of_the_map(bot):
             bot.log("Enemy is building on our side of the map!", logging.WARNING)
             enough = ARMY_SIZE_BASE_LEVEL
         towards = None
         if (strength >= enough or supply_used > ARMY_SIZE_MAX):
-            if forces_idle and forces_idle.center.distance_to(bot.army_attack_point) < ARMY_MOVEMENT_REGROUP_RANGE:
+            dispersion = get_army_dispersion(units, bot, army_center)
+            if dispersion < ARMY_DISPERSION_MAX:
+                # bot.log(f"Tight army advancing {dispersion:.2f}")
                 towards = nearest_enemy_building(
                     bot.army_attack_point,
                     enemy_structures,
                     enemy_start_locations)
+            else:
+                # bot.log(f"Army is too dispersed {dispersion:.2f}")
+                main_force = units.closer_than(15, army_center)
+                if main_force:
+                    # bot.log(f"Regrouping at main force")
+                    towards = main_force.center
+                else:
+                    # bot.log(f"Regrouping at center of map (Bad!)")
+                    towards = army_center
         else:
             towards = bot.hq_front_door
-        if towards:
-            bot.army_attack_point = bot.army_attack_point.towards(towards, ARMY_MOVEMENT_NEXT_MARCH_DISTANCE)
-        # headless.render_army(bot, forces_idle)
-
-    for unit in forces_idle:
-        actions.append(unit.attack(bot.army_attack_point))
-
+        bot.army_attack_point = towards
+        bot.world_text("towards", towards)
+        # headless.render_army(bot, all_units)
+        for unit in units:
+            actions.append(unit.attack(bot.army_attack_point))
     return actions
 
 
