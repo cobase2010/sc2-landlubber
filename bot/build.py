@@ -54,10 +54,8 @@ async def begin_projects(bot):
                 bot.log("Building lair")
                 await bot.do_actions([random_townhall.build(LAIR)])
 
-        if len(bot.townhalls) > 1:
-            await build_one(bot, EVOLUTIONCHAMBER)
-
     if bot.units(LAIR).ready.exists and len(bot.townhalls.ready) > 1:
+        await build_one(bot, EVOLUTIONCHAMBER)
         await build_one(bot, SPIRE)
 
 
