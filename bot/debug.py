@@ -1,5 +1,8 @@
 import logging
 import time
+from sc2.constants import *
+
+STEP_DURATION_WARNING_MILLIS = 40
 
 
 def print_running_speed(bot, iteration):
@@ -34,8 +37,18 @@ def print_score(bot):
         ))
 
 
-def print_warnings_for_unoptimal_play(bot):
-    if bot.vespene > 600:
-        bot.log("Too much gas", logging.WARNING)
-    if bot.supply_left == 0:
-        bot.log("Not enough overlords!", logging.WARNING)
+def warn_unoptimal_play(bot, iteration):
+    if iteration % 10 == 0 and bot.units(LARVA).amount > 2:
+        bot.log(f"{bot.units(LARVA).amount} unused larvae!", logging.WARNING)
+
+    if iteration % 80 == 0:
+        if bot.vespene > 600:
+            bot.log("Too much gas!", logging.WARNING)
+        if bot.supply_left == 0:
+            bot.log("Not enough overlords!", logging.WARNING)
+
+
+def warn_for_step_duration(bot, step_start):
+    duration_millis = (time.time() - step_start) * 1000
+    if duration_millis > STEP_DURATION_WARNING_MILLIS:
+        bot.log(f"{duration_millis:.0f}ms step duration", logging.WARNING)

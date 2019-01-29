@@ -59,10 +59,13 @@ class MyBot(sc2.BotAI):
         logger.log(level, "{:4.1f} {:3}/{:3} {}".format(self.time / 60, self.supply_used, self.supply_cap, msg))
 
     async def on_step(self, iteration):
+        step_start = time.time()
         await self.main_loop(iteration)
+        debug.warn_for_step_duration(self, step_start)
         # try:
         # except Exception as e:
         #     print("ONLY SUCKERS CRASH!", e)
+
 
     # MAIN LOOP =========================================================================
     async def main_loop(self, iteration):
@@ -85,9 +88,9 @@ class MyBot(sc2.BotAI):
 
         larvae = self.units(LARVA)
         overlords = self.units(OVERLORD)
-        forces = self.units(ZERGLING) | self.units(ROACH) | self.units(HYDRALISK) | self.units(MUTALISK)
-        forces_ground = self.units(ZERGLING) | self.units(ROACH) | self.units(HYDRALISK)
-        forces_air = self.units(MUTALISK)
+        forces = self.units(ZERGLING).ready | self.units(ROACH).ready | self.units(HYDRALISK).ready | self.units(MUTALISK).ready
+        # forces_ground = self.units(ZERGLING) | self.units(ROACH) | self.units(HYDRALISK)
+        # forces_air = self.units(MUTALISK)
         actions = []
 
         if not self.townhalls.exists:
@@ -173,10 +176,10 @@ class MyBot(sc2.BotAI):
 
         await self.do_actions(actions)
 
+        debug.warn_unoptimal_play(self, iteration)
         if iteration % 80 == 0:
             debug.print_score(self)
             debug.print_running_speed(self, iteration)
-            debug.print_warnings_for_unoptimal_play(self)
 
         self.world_text("door", self.hq_front_door)
         await self._client.send_debug()
