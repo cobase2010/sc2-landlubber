@@ -34,7 +34,10 @@ def get_simple_army_strength(units):
 def nearest_enemy_building(rally, enemy_structures, enemy_start_locations):
     if enemy_structures.exists:
         return enemy_structures.closest_to(rally).position
-    return rally.closest(enemy_start_locations) # FIXME This crashed to AssertionError position.py L51 assert ps against SystemAbus
+    else:
+        locs = enemy_start_locations # Really weird crash bug, enemy_start_locations is sometimes empty
+        assert len(locs) > 0
+        return rally.closest(locs)
 
 
 def guess_front_door(bot):
