@@ -10,17 +10,19 @@ async def build_one(bot, it):
 
 
 async def ensure_extractors(bot):
-    if not bot.already_pending(EXTRACTOR):
-        for town in bot.townhalls:
-            if town.is_ready and economy.drone_rate_for_towns([town]) >= 0.90:
-                for geyser in bot.state.vespene_geyser.closer_than(10, town):
-                    if await bot.can_place(EXTRACTOR, geyser.position) and bot.can_afford(EXTRACTOR):
-                        workers = bot.workers.gathering
-                        if workers.exists:
-                            worker = workers.closest_to(geyser)
-                            bot.log("Building extractor")
-                            await bot.do_actions([worker.build(EXTRACTOR, geyser)])
-                            return
+    if bot.units(EXTRACTOR).ready.amount > 0 and not bot.units(LAIR).ready.exists:
+        return
+    elif not bot.already_pending(EXTRACTOR):
+            for town in bot.townhalls:
+                if town.is_ready and economy.drone_rate_for_towns([town]) >= 0.90:
+                    for geyser in bot.state.vespene_geyser.closer_than(10, town):
+                        if await bot.can_place(EXTRACTOR, geyser.position) and bot.can_afford(EXTRACTOR):
+                            workers = bot.workers.gathering
+                            if workers.exists:
+                                worker = workers.closest_to(geyser)
+                                bot.log("Building extractor")
+                                await bot.do_actions([worker.build(EXTRACTOR, geyser)])
+                                return
 
 def should_train_overlord(bot):
     if bot.can_afford(OVERLORD):
