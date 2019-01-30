@@ -12,7 +12,7 @@ Forked from [Overmind-Challenge-Template](https://gitlab.com/overmind-challenge/
 
 ## Level
 
-The bot wins all races some of the time against Difficulty.Harder (called "Very Hard" in-game) and all the time against Difficulty.Hard (called "Harder" in-game). Zerg seems to be the easiest.
+The bot wins all races some of the time against Difficulty.Harder (called "Very Hard" in-game) and all the time against Difficulty.Hard (called "Harder" in-game).
 
 Usual score at 5/10/19 minutes game time:
 

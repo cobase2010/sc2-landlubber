@@ -38,11 +38,11 @@ def print_score(bot):
 
 
 def warn_unoptimal_play(bot, iteration):
-    if iteration % 10 == 0 and bot.units(LARVA).amount > 2:
-        bot.log(f"{bot.units(LARVA).amount} unused larvae!", logging.WARNING)
+    if iteration % 10 == 0 and bot.units(LARVA).amount > 3:
+        bot.log(f"{bot.units(LARVA).amount} unused larvae!", logging.INFO)
 
     if iteration % 80 == 0:
-        if bot.vespene > 600:
+        if bot.vespene > 500:
             bot.log("Too much gas!", logging.WARNING)
         if bot.supply_left == 0:
             bot.log("Not enough overlords!", logging.WARNING)

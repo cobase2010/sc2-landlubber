@@ -1,3 +1,4 @@
+import time
 import logging
 import random
 import statistics
@@ -5,10 +6,11 @@ from sc2.constants import *
 # import bot.headless_render as headless
 
 MAX_BASE_DOOR_RANGE = 30
-ARMY_SIZE_BASE_LEVEL = 5
-ARMY_SIZE_TIME_MULTIPLIER = 3
+ARMY_SIZE_BASE_LEVEL = 4
+ARMY_SIZE_TIME_MULTIPLIER = 2.8
 ARMY_SIZE_MAX = 180
-ARMY_DISPERSION_MAX = 8
+ARMY_DISPERSION_MAX = 15
+ARMY_MAIN_FORCE_RADIUS = 25 # 15 yo-yos too much back and forth, 30 is almost slightly too string-like march.
 
 
 async def kamikaze(bot, forces):
@@ -26,6 +28,7 @@ async def kamikaze(bot, forces):
 
 
 def get_simple_army_strength(units):
+    # TODO maybe this should be based on mineral+gas cost instead of food? Roach and muta require same food but different cost
     half_food = units(ZERGLING).ready.amount
     double_food = units(ROACH).ready.amount + units(MUTALISK).ready.amount
     return (0.5 * half_food) + (2 * double_food)
@@ -63,7 +66,7 @@ def enemy_is_building_on_our_side_of_the_map(bot):
     return False
 
 
-def get_army_dispersion(units, bot, army_mass_center):
+def unit_dispersion(units, bot):
     if units:
         center = units.center
         return statistics.median([unit.distance_to(center) for unit in units])
@@ -72,36 +75,39 @@ def get_army_dispersion(units, bot, army_mass_center):
 
 
 # Attack to enemy base
-def get_army_actions(bot, iteration, units, enemy_structures, enemy_start_locations, all_units, time, supply_used):
+def get_army_actions(bot, iteration, units, enemy_structures, enemy_start_locations, all_units, game_time, supply_used):
     actions = []
     if units and iteration % 10 == 0:
-        army_center = units.center
-        bot.world_text("center", army_center)
+        bot.world_text("center", units.center)
         strength = get_simple_army_strength(all_units) # TODO all_units or just idle?
-        enough = (ARMY_SIZE_BASE_LEVEL + ((time / 60) * ARMY_SIZE_TIME_MULTIPLIER))
+        enough = (ARMY_SIZE_BASE_LEVEL + ((game_time / 60) * ARMY_SIZE_TIME_MULTIPLIER))
         if enemy_is_building_on_our_side_of_the_map(bot):
             bot.log("Enemy is building on our side of the map!", logging.WARNING)
             enough = ARMY_SIZE_BASE_LEVEL
         towards = None
         if (strength >= enough or supply_used > ARMY_SIZE_MAX):
-            dispersion = get_army_dispersion(units, bot, army_center)
-            if dispersion < ARMY_DISPERSION_MAX:
-                # bot.log(f"Tight army advancing {dispersion:.2f}")
+            dispersion = unit_dispersion(units, bot)
+
+            if dispersion < ARMY_DISPERSION_MAX: # Attack!
+                bot.log(f"Tight army advancing ({dispersion:.0f})", logging.DEBUG)
                 towards = nearest_enemy_building(
                     bot.army_attack_point,
                     enemy_structures,
                     enemy_start_locations)
-            else:
-                # bot.log(f"Army is too dispersed {dispersion:.2f}")
-                main_force = units.closer_than(15, army_center)
+
+            else: # Regroup, too dispersed
+                main_force = units.closer_than(ARMY_MAIN_FORCE_RADIUS, units.center)
                 if main_force:
-                    # bot.log(f"Regrouping at main force")
+                    bot.log(f"Army is slightly dispersed ({dispersion:.0f})", logging.DEBUG)
                     towards = main_force.center
                 else:
-                    # bot.log(f"Regrouping at center of map (Bad!)")
-                    towards = army_center
-        else:
+                    bot.log(f"Army is TOTALLY scattered", logging.DEBUG)
+                    towards = units.center
+
+        else: # Retreat, too weak!
+            bot.log(f"Army is too small, retreating!", logging.DEBUG)
             towards = bot.hq_front_door
+
         bot.army_attack_point = towards
         bot.world_text("towards", towards)
         # headless.render_army(bot, all_units)
@@ -144,11 +150,11 @@ def base_defend(bot, forces):
             enemy = enemies.closest_to(town)
             defenders = forces.idle.closer_than(40, town)
             if defenders:
-                bot.log(f"Defending our base with {defenders.amount} units against {enemies.amount} enemies", logging.INFO)
+                bot.log(f"Defending our base with {defenders.amount} units against {enemies.amount} enemies", logging.DEBUG)
                 for unit in defenders:
                     actions.append(unit.attack(enemy.position))  # Attack the position, not the unit, to avoid being lured
             else:
-                bot.log(f"Enemy attacking our base with {enemies.amount} units but no defenders left!", logging.WARNING)
+                bot.log(f"Enemy attacking our base with {enemies.amount} units but no defenders left!", logging.DEBUG)
 
             if is_worker_rush(bot, town, enemies):
                 bot.log("We are being worker rushed!", logging.WARNING)
