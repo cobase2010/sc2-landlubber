@@ -177,9 +177,7 @@ class MyBot(sc2.BotAI):
         await self.do_actions(actions)
 
         debug.warn_unoptimal_play(self, iteration)
-        if iteration % 80 == 0:
-            debug.print_score(self)
-            debug.print_running_speed(self, iteration)
-
+        debug.print_score(self, iteration)
+        debug.print_running_speed(self, iteration)
         self.world_text("door", self.hq_front_door)
         await self._client.send_debug()
