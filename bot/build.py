@@ -51,7 +51,7 @@ async def begin_projects(bot):
         await build_one(bot, ROACHWARREN)
 
     if bot.units(ROACHWARREN).ready.exists:
-        if not (bot.units(LAIR).exists or bot.already_pending(LAIR)) and random_townhall.noqueue:
+        if (not bot.units(LAIR).exists or bot.already_pending(LAIR)) and random_townhall.noqueue:
             if bot.can_afford(LAIR):
                 bot.log("Building lair")
                 await bot.do_actions([random_townhall.build(LAIR)])
