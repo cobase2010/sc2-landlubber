@@ -38,9 +38,9 @@ def nearest_enemy_building(rally, enemy_structures, enemy_start_locations):
     if enemy_structures.exists:
         return enemy_structures.closest_to(rally).position
     else:
-        locs = enemy_start_locations # Really weird crash bug, enemy_start_locations is sometimes empty
-        assert len(locs) > 0
-        return rally.closest(locs)
+        if enemy_start_locations:
+            return rally.closest(enemy_start_locations)
+    return None
 
 
 def guess_front_door(bot):
@@ -94,6 +94,8 @@ def get_army_actions(bot, iteration, units, enemy_structures, enemy_start_locati
                     bot.army_attack_point,
                     enemy_structures,
                     enemy_start_locations)
+                if towards is None:
+                    bot.log("Don't know where to go!", logging.ERROR)
 
             else: # Regroup, too dispersed
                 main_force = units.closer_than(ARMY_MAIN_FORCE_RADIUS, units.center)
