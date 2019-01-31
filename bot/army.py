@@ -96,6 +96,7 @@ def get_army_actions(bot, iteration, units, enemy_structures, enemy_start_locati
                     enemy_start_locations)
                 if towards is None:
                     bot.log("Don't know where to go!", logging.ERROR)
+                    return []  # FIXME This prevents a crash on win, but we should start scouting for enemy
 
             else: # Regroup, too dispersed
                 main_force = units.closer_than(ARMY_MAIN_FORCE_RADIUS, units.center)

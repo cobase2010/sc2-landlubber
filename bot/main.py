@@ -53,7 +53,10 @@ class MyBot(sc2.BotAI):
         self.log("Score: " + str(self.state.score.score))
 
     def world_text(self, text, pos):
-        self._client.debug_text_world(text, Point3((pos.position.x, pos.position.y, 10)), None, 14)
+        if pos:
+            self._client.debug_text_world(text, Point3((pos.position.x, pos.position.y, 10)), None, 14)
+        else:
+            self.log("Received None position to draw text", logging.ERROR)
 
     def log(self, msg, level=logging.INFO):
         logger.log(level, "{:4.1f} {:3}/{:3} {}".format(self.time / 60, self.supply_used, self.supply_cap, msg))

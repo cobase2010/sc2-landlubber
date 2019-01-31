@@ -20,7 +20,7 @@ def print_running_speed(bot, iteration):
 
 
 def print_score(bot, iteration):
-    if iteration % 5 == 0 and int(bot.time) in [180, 240, 300, 360, 420, 480, 540, 600, 660, 900, 1145]:
+    if iteration % 5 == 0 and int(bot.time) % 60 == 0:
         s = bot.state.score
         bot.log("score  unit stru   minerals    gas      rate     idle")
         bot.log("{:5} {:5.0f} {:4.0f} {:5.0f}/{:5.0f} {:3.0f}/{:3.0f} {:4.0f}/{:3.0f} {:.0f}/{:.0f}".format(

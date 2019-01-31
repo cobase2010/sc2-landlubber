@@ -1,6 +1,7 @@
 import logging
 from sc2.constants import *
 
+
 def can_research(bot, tech):
     if tech not in bot.state.upgrades and bot.can_afford(tech):
         if tech in [ZERGGROUNDARMORSLEVEL2, ZERGMISSILEWEAPONSLEVEL2, ZERGFLYERWEAPONSLEVEL2, ZERGFLYERARMORSLEVEL2]:
@@ -13,11 +14,13 @@ def can_research(bot, tech):
             return True
     return False
 
+
 def get_tech_to_research(bot, techs):
     for tech in techs:
         if can_research(bot, tech):
             return tech
     return None
+
 
 def upgrade_tech(bot):
     if GLIALRECONSTITUTION not in bot.state.upgrades and bot.can_afford(GLIALRECONSTITUTION):
