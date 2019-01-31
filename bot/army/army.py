@@ -2,8 +2,8 @@ import time
 import logging
 import random
 import statistics
-from sc2.constants import *
-# import bot.headless_render as headless
+from sc2.ids.unit_typeid import UnitTypeId
+# from bot.debug import headless_render
 
 MAX_BASE_DOOR_RANGE = 30
 ARMY_SIZE_BASE_LEVEL = 4
@@ -20,7 +20,7 @@ async def kamikaze(bot, forces):
             bot.hq_loss_handled = True
             bot.log("All townhalls lost, loss is probably imminent!", logging.WARNING)
             if bot.enemy_start_locations:
-                for unit in bot.units(DRONE) | bot.units(QUEEN) | forces:
+                for unit in bot.units(UnitTypeId.DRONE) | bot.units(UnitTypeId.QUEEN) | forces:
                     actions.append(unit.attack(bot.enemy_start_locations[0]))
                 await bot.do_actions(actions)
         except Exception as e:
@@ -29,8 +29,8 @@ async def kamikaze(bot, forces):
 
 def get_simple_army_strength(units):
     # TODO maybe this should be based on mineral+gas cost instead of food? Roach and muta require same food but different cost
-    half_food = units(ZERGLING).ready.amount
-    double_food = units(ROACH).ready.amount + units(MUTALISK).ready.amount
+    half_food = units(UnitTypeId.ZERGLING).ready.amount
+    double_food = units(UnitTypeId.ROACH).ready.amount + units(UnitTypeId.MUTALISK).ready.amount
     return (0.5 * half_food) + (2 * double_food)
 
 
@@ -138,7 +138,7 @@ def patrol_with_overlords(overlords, front_door, start_location, enemy_start_loc
 
 def is_worker_rush(bot, town, enemies_approaching):
     enemies = enemies_approaching.closer_than(6, town)
-    worker_enemies = enemies(DRONE) | enemies(PROBE) | enemies(SCV)
+    worker_enemies = enemies(UnitTypeId.DRONE) | enemies(UnitTypeId.PROBE) | enemies(UnitTypeId.SCV)
     if worker_enemies.amount > 1 and (worker_enemies.amount / enemies.amount) >= 0.8:
         return True
     return False
@@ -161,7 +161,7 @@ def base_defend(bot, forces):
 
             if is_worker_rush(bot, town, enemies):
                 bot.log("We are being worker rushed!", logging.WARNING)
-                for drone in bot.units(DRONE).closer_than(60, town):
+                for drone in bot.units(UnitTypeId.DRONE).closer_than(60, town):
                     actions.append(drone.attack(enemy.position))
 
             if len(enemies) == 1:

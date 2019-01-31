@@ -1,5 +1,5 @@
 # import emoji
-from sc2.constants import *
+from sc2.ids.unit_typeid import UnitTypeId
 
 DRAW_WIDTH = 80
 
@@ -56,7 +56,7 @@ def render_army(bot, forces_idle):
     # row[0] = ":house:"
     # row[-1] = ":post_office:"
 
-    forces = bot.units(ZERGLING) | bot.units(ROACH) | bot.units(HYDRALISK) | bot.units(MUTALISK)
+    forces = bot.units(UnitTypeId.ZERGLING) | bot.units(UnitTypeId.ROACH) | bot.units(UnitTypeId.HYDRALISK) | bot.units(UnitTypeId.MUTALISK)
     for unit in forces:
         pos = px(unit.position)
         row[pos] = ICON_ARMY_FRIENDLY

@@ -4,15 +4,17 @@ import sc2
 import sys
 import time
 from sc2 import Race, Difficulty
-from sc2.constants import *
+from sc2.ids.unit_typeid import UnitTypeId
+from sc2.ids.ability_id import AbilityId
 from sc2.data import race_townhalls
 from sc2.player import Bot, Computer
 from sc2.position import Point3
-import bot.army as army
-import bot.build as build
-import bot.economy as economy
-import bot.tech as tech
-import bot.debug as debug
+from bot.army import army
+from bot.army.enemy import EnemyTracker
+from bot.economy import build
+from bot.economy import economy
+from bot.economy import tech
+from bot.debug import debug
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -25,6 +27,8 @@ logger.addHandler(handler)
 
 class MyBot(sc2.BotAI):
     def on_start(self):
+        self.enemy = EnemyTracker(self)
+
         self.tick_millis = 0
         self.tick_millis_since_last_base_management = 0
         self.match_start_time = time.time()
@@ -89,11 +93,11 @@ class MyBot(sc2.BotAI):
             self.log("Init calculations took {:.2f}s".format(time.time() - start))
             return
 
-        larvae = self.units(LARVA)
-        overlords = self.units(OVERLORD)
-        forces = self.units(ZERGLING).ready | self.units(ROACH).ready | self.units(HYDRALISK).ready | self.units(MUTALISK).ready
-        # forces_ground = self.units(ZERGLING) | self.units(ROACH) | self.units(HYDRALISK)
-        # forces_air = self.units(MUTALISK)
+        larvae = self.units(UnitTypeId.LARVA)
+        overlords = self.units(UnitTypeId.OVERLORD)
+        forces = self.units(UnitTypeId.ZERGLING).ready | self.units(UnitTypeId.ROACH).ready | self.units(UnitTypeId.HYDRALISK).ready | self.units(UnitTypeId.MUTALISK).ready
+        # forces_ground = self.units(UnitTypeId.ZERGLING) | self.units(UnitTypeId.ROACH) | self.units(UnitTypeId.HYDRALISK)
+        # forces_air = self.units(UnitTypeId.MUTALISK)
         actions = []
 
         if not self.townhalls.exists:
@@ -122,9 +126,9 @@ class MyBot(sc2.BotAI):
 
             # Hatchery rally points
             for hatch in self.townhalls:
-                actions.append(hatch(RALLY_HATCHERY_UNITS, self.army_spawn_rally_point))
+                actions.append(hatch(AbilityId.RALLY_HATCHERY_UNITS, self.army_spawn_rally_point))
                 if not hatch.is_ready:
-                    actions.append(hatch(RALLY_HATCHERY_WORKERS, economy.get_closest_mineral_for_hatchery(self.state.mineral_field(), hatch)))
+                    actions.append(hatch(AbilityId.RALLY_HATCHERY_WORKERS, economy.get_closest_mineral_for_hatchery(self.state.mineral_field(), hatch)))
 
             actions += build.train_units(self, larvae)
             await build.begin_projects(self)
@@ -137,12 +141,12 @@ class MyBot(sc2.BotAI):
             # Scouting
             scout = self.units.find_by_tag(self.active_scout_tag)
             if not scout:
-                if self.units(ZERGLING).ready.exists:
-                    scout = self.units(ZERGLING).ready.first
+                if self.units(UnitTypeId.ZERGLING).ready.exists:
+                    scout = self.units(UnitTypeId.ZERGLING).ready.first
                     self.active_scout_tag = scout.tag
                     self.log("Assigned a new zergling scout " + str(scout.tag), logging.INFO)
-                elif self.units(ROACHWARREN).exists and self.units(DRONE).ready.exists:
-                    scout = self.units(DRONE).ready.random
+                elif self.units(UnitTypeId.ROACHWARREN).exists and self.units(UnitTypeId.DRONE).ready.exists:
+                    scout = self.units(UnitTypeId.DRONE).ready.random
                     self.active_scout_tag = scout.tag
                     self.log("Assigned a new drone scout " + str(scout.tag), logging.INFO)
             if scout:
@@ -172,7 +176,7 @@ class MyBot(sc2.BotAI):
         if self.known_enemy_units and iteration % 10 == 0:
             # Intelligence
             if self.known_enemy_race is None:
-                self.known_enemy_race = self.known_enemy_units[0].race
+                self.known_enemy_race = self.known_enemy_units.first.race
                 self.log("Enemy is now known to be " + str(self.known_enemy_race))
 
             actions += army.base_defend(self, forces)

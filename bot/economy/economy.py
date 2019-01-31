@@ -1,6 +1,7 @@
 import logging
-from sc2.constants import *
-import bot.util as util
+from sc2.ids.unit_typeid import UnitTypeId
+from sc2.ids.ability_id import AbilityId
+from bot.util import util
 
 HATCHERY_COST = 300
 HATCHERY_COST_BUFFER_INCREMENT = 40
@@ -22,7 +23,7 @@ def drone_rate_for_towns(townhalls):
 
 def should_build_hatchery(bot):
     if not bot.townhalls.not_ready and not bot.units.find_by_tag(bot.active_expansion_builder):
-        if len(bot.units(QUEEN)) >= len(bot.townhalls):
+        if len(bot.units(UnitTypeId.QUEEN)) >= len(bot.townhalls):
             if drone_rate_for_towns(bot.townhalls) >= EXPANSION_DRONE_THRESHOLD and len(bot.expansions_sorted) > 0:
                 if bot.minerals >= HATCHERY_COST + (HATCHERY_COST_BUFFER_INCREMENT * (len(bot.townhalls) - 1)):
                     return True
@@ -76,8 +77,8 @@ def get_reassignable_drone(town, workers):
 
 
 def should_train_drone(bot, townhall):
-    if len(bot.units(DRONE)) < MAX_NUMBER_OF_DRONES:
-        if townhall.assigned_harvesters < townhall.ideal_harvesters and bot.can_afford(DRONE):
+    if len(bot.units(UnitTypeId.DRONE)) < MAX_NUMBER_OF_DRONES:
+        if townhall.assigned_harvesters < townhall.ideal_harvesters and bot.can_afford(UnitTypeId.DRONE):
             if len(bot.townhalls) == 1:
                 probability = 100
             else:
@@ -94,7 +95,7 @@ def get_closest_mineral_for_hatchery(minerals, hatch):
 
 def assign_drones_to_extractors(bot):
     actions = []
-    for extractor in bot.units(EXTRACTOR):
+    for extractor in bot.units(UnitTypeId.EXTRACTOR):
         if extractor.assigned_harvesters < extractor.ideal_harvesters:
             worker = bot.workers.closer_than(20, extractor)
             if worker.exists:
@@ -105,17 +106,17 @@ def assign_drones_to_extractors(bot):
 
 async def produce_larvae(bot):
     actions = []
-    for queen in bot.units(QUEEN).idle:
+    for queen in bot.units(UnitTypeId.QUEEN).idle:
         abilities = await bot.get_available_abilities(queen)
         if AbilityId.EFFECT_INJECTLARVA in abilities:
             bot.log("Queen creating larvae", logging.DEBUG)
-            actions.append(queen(EFFECT_INJECTLARVA, bot.townhalls.closest_to(queen.position)))
+            actions.append(queen(AbilityId.EFFECT_INJECTLARVA, bot.townhalls.closest_to(queen.position)))
     return actions
 
 
 def assign_idle_drones_to_minerals(bot):
     actions = []
-    for drone in bot.units(DRONE).idle:
+    for drone in bot.units(UnitTypeId.DRONE).idle:
         new_town = get_town_with_free_jobs(bot.townhalls)
         if new_town:
             bot.log("Reassigning idle drone", logging.DEBUG)

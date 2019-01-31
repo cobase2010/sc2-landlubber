@@ -1,6 +1,6 @@
 import logging
 import time
-from sc2.constants import *
+from sc2.ids.unit_typeid import UnitTypeId
 
 STEP_DURATION_WARNING_MILLIS = 50
 
@@ -39,8 +39,8 @@ def print_score(bot, iteration):
 
 
 def warn_unoptimal_play(bot, iteration):
-    if iteration % 10 == 0 and bot.units(LARVA).amount > 3:
-        bot.log(f"{bot.units(LARVA).amount} unused larvae!", logging.INFO)
+    if iteration % 10 == 0 and bot.units(UnitTypeId.LARVA).amount > 3:
+        bot.log(f"{bot.units(UnitTypeId.LARVA).amount} unused larvae!", logging.INFO)
 
     if iteration % 80 == 0:
         if bot.vespene > 500:

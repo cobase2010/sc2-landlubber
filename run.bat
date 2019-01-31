@@ -1,1 +1,1 @@
-python run_locally.py
+python run.py
