@@ -66,12 +66,17 @@ class MyBot(sc2.BotAI):
         logger.log(level, "{:4.1f} {:3}/{:3} {}".format(self.time / 60, self.supply_used, self.supply_cap, msg))
 
     async def on_step(self, iteration):
-        step_start = time.time()
-        await self.main_loop(iteration)
-        debug.warn_for_step_duration(self, step_start)
-        # try:
-        # except Exception as e:
-        #     print("ONLY SUCKERS CRASH!", e)
+        if self.time_budget_available and self.time_budget_available < 0.3:
+            self.log(f"Skipping step to avoid post-cooldown vegetable bug, budget {self.time_budget_available:.3f}", logging.ERROR)
+            # return
+            raise Exception  # TODO switch to return before deadline
+        else:
+            step_start = time.time()
+            await self.main_loop(iteration)
+            debug.warn_for_step_duration(self, step_start)
+            # try:
+            # except Exception as e:
+            #     print("ONLY SUCKERS CRASH!", e)
 
 
     # MAIN LOOP =========================================================================
