@@ -1,4 +1,3 @@
-import logging
 from sc2.ids.unit_typeid import UnitTypeId
 from sc2.ids.ability_id import AbilityId
 from bot.util import util
@@ -41,19 +40,19 @@ def get_town_with_free_jobs(townhalls, excluded=None):
     return None
 
 
-def get_expansion_order(expansion_locations, start_location, enemy_start_locations, logger):
+def get_expansion_order(bot, expansion_locations, start_location, enemy_start_locations):
     exps = expansion_locations  # Fetching this property takes 1.6 seconds after which it is cached forever
     exps.pop(start_location)
     for enemy in enemy_start_locations:
         exps.pop(enemy)
     sorted = start_location.sort_by_distance(exps)
     if len(enemy_start_locations) != 1:
-        logger.error("There are more than one enemy start location in this map! Assumptions might fail" + str(len(enemy_start_locations)))
+        bot.logger.error("There are more than one enemy start location in this map! Assumptions might fail" + str(len(enemy_start_locations)))
     if start_location in sorted:
-        logger.error("Starting location unexpectedly still in expansion locations")
+        bot.logger.error("Starting location unexpectedly still in expansion locations")
     for enemy in enemy_start_locations:
         if enemy in sorted:
-            logger.error("Enemy location unexpectedly still in expansion locations")
+            bot.logger.error("Enemy location unexpectedly still in expansion locations")
     return sorted
 
 
@@ -63,7 +62,7 @@ async def reassign_overideal_drones(bot):
             drone = get_reassignable_drone(old_town, bot.workers)
             new_town = get_town_with_free_jobs(bot.townhalls, old_town)
             if new_town and drone:
-                bot.log("Reassigning drone from overcrowded town", logging.DEBUG)
+                bot.logger.debug("Reassigning drone from overcrowded town")
                 mineral = get_closest_mineral_for_hatchery(bot.state.mineral_field(), new_town)
                 await bot.do_actions([drone.gather(mineral)])
 
@@ -73,7 +72,10 @@ def get_reassignable_drone(town, workers):
     for worker in workers:
         if len(worker.orders) == 1 and worker.orders[0].ability.id in {AbilityId.HARVEST_GATHER, AbilityId.HARVEST_RETURN}:
             return worker
-    return workers.random
+    if workers:
+        return workers.random
+    else:
+        return None
 
 
 def should_train_drone(bot, townhall):
@@ -85,7 +87,7 @@ def should_train_drone(bot, townhall):
                 probability = DRONE_TRAINING_PROBABILITY_AT_EXPANSIONS
             return util.probability(probability)
     else:
-        bot.log("Reached max number of drones", logging.DEBUG)
+        bot.logger.log("Reached max number of drones")
         return False
 
 
@@ -99,7 +101,7 @@ def assign_drones_to_extractors(bot):
         if extractor.assigned_harvesters < extractor.ideal_harvesters:
             worker = bot.workers.closer_than(20, extractor)
             if worker.exists:
-                bot.log("Assigning drone to extractor", logging.DEBUG)
+                bot.logger.debug("Assigning drone to extractor")
                 actions.append(worker.random.gather(extractor))
     return actions
 
@@ -109,7 +111,7 @@ async def produce_larvae(bot):
     for queen in bot.units(UnitTypeId.QUEEN).idle:
         abilities = await bot.get_available_abilities(queen)
         if AbilityId.EFFECT_INJECTLARVA in abilities:
-            bot.log("Queen creating larvae", logging.DEBUG)
+            bot.logger.debug("Queen creating larvae")
             actions.append(queen(AbilityId.EFFECT_INJECTLARVA, bot.townhalls.closest_to(queen.position)))
     return actions
 
@@ -119,7 +121,7 @@ def assign_idle_drones_to_minerals(bot):
     for drone in bot.units(UnitTypeId.DRONE).idle:
         new_town = get_town_with_free_jobs(bot.townhalls)
         if new_town:
-            bot.log("Reassigning idle drone", logging.DEBUG)
+            bot.logger.debug("Reassigning idle drone")
             mineral = get_closest_mineral_for_hatchery(bot.state.mineral_field(), new_town)
             actions.append(drone.gather(mineral))
     return actions

@@ -28,7 +28,7 @@ def main():
             Computer(Race.Random, Difficulty.Harder)
         ],
         realtime=False,
-        step_time_limit=1.0, # We use locally much stricter limit than in the competition
+        step_time_limit=0.5, # We use locally much stricter limit than in the competition
         game_time_limit=(60*20),
         save_replay_as="latest.SC2Replay"
     )

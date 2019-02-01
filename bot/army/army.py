@@ -1,5 +1,4 @@
 import time
-import logging
 import random
 import statistics
 from sc2.ids.unit_typeid import UnitTypeId
@@ -18,7 +17,7 @@ async def kamikaze(bot, forces):
         try:
             actions = []
             bot.hq_loss_handled = True
-            bot.log("All townhalls lost, loss is probably imminent!", logging.WARNING)
+            bot.logger.warn("All townhalls lost, loss is probably imminent!")
             if bot.enemy_start_locations:
                 for unit in bot.units(UnitTypeId.DRONE) | bot.units(UnitTypeId.QUEEN) | forces:
                     actions.append(unit.attack(bot.enemy_start_locations[0]))
@@ -51,10 +50,10 @@ def guess_front_door(bot):
         if ramp.top_center.distance_to(bot.start_location) <= MAX_BASE_DOOR_RANGE:
             doors.append(ramp)
     if len(doors) == 1:
-        bot.log("This base seems to have only one ramp")
+        bot.logger.log("This base seems to have only one ramp")
         return doors[0].top_center
     else:
-        bot.log("This base seems to several ramps, let's wait for scout to determine front door", logging.WARNING)
+        bot.logger.warn("This base seems to several ramps, let's wait for scout to determine front door")
         return bot.start_location.towards(bot.game_info.map_center, 5)
 
 
@@ -82,33 +81,33 @@ def get_army_actions(bot, iteration, units, enemy_structures, enemy_start_locati
         strength = get_simple_army_strength(all_units) # TODO all_units or just idle?
         enough = (ARMY_SIZE_BASE_LEVEL + ((game_time / 60) * ARMY_SIZE_TIME_MULTIPLIER))
         if enemy_is_building_on_our_side_of_the_map(bot):
-            bot.log("Enemy is building on our side of the map!", logging.WARNING)
+            bot.logger.warn("Enemy is building on our side of the map!")
             enough = ARMY_SIZE_BASE_LEVEL
         towards = None
         if (strength >= enough or supply_used > ARMY_SIZE_MAX):
             dispersion = unit_dispersion(units, bot)
 
             if dispersion < ARMY_DISPERSION_MAX: # Attack!
-                bot.log(f"Tight army advancing ({dispersion:.0f})", logging.DEBUG)
+                bot.logger.debug(f"Tight army advancing ({dispersion:.0f})")
                 towards = nearest_enemy_building(
                     bot.army_attack_point,
                     enemy_structures,
                     enemy_start_locations)
                 if towards is None:
-                    bot.log("Don't know where to go!", logging.ERROR)
+                    bot.logger.error("Don't know where to go!")
                     return []  # FIXME This prevents a crash on win, but we should start scouting for enemy
 
             else: # Regroup, too dispersed
                 main_force = units.closer_than(ARMY_MAIN_FORCE_RADIUS, units.center)
                 if main_force:
-                    bot.log(f"Army is slightly dispersed ({dispersion:.0f})", logging.DEBUG)
+                    bot.logger.debug(f"Army is slightly dispersed ({dispersion:.0f})")
                     towards = main_force.center
                 else:
-                    bot.log(f"Army is TOTALLY scattered", logging.DEBUG)
+                    bot.logger.debug(f"Army is TOTALLY scattered")
                     towards = units.center
 
         else: # Retreat, too weak!
-            bot.log(f"Army is too small, retreating!", logging.DEBUG)
+            bot.logger.debug(f"Army is too small, retreating!")
             towards = bot.hq_front_door
 
         bot.army_attack_point = towards
@@ -153,18 +152,18 @@ def base_defend(bot, forces):
             enemy = enemies.closest_to(town)
             defenders = forces.idle.closer_than(40, town)
             if defenders:
-                bot.log(f"Defending our base with {defenders.amount} units against {enemies.amount} enemies", logging.DEBUG)
+                bot.logger.debug(f"Defending our base with {defenders.amount} units against {enemies.amount} enemies")
                 for unit in defenders:
                     actions.append(unit.attack(enemy.position))  # Attack the position, not the unit, to avoid being lured
             else:
-                bot.log(f"Enemy attacking our base with {enemies.amount} units but no defenders left!", logging.DEBUG)
+                bot.logger.debug(f"Enemy attacking our base with {enemies.amount} units but no defenders left!")
 
             if is_worker_rush(bot, town, enemies):
-                bot.log("We are being worker rushed!", logging.WARNING)
+                bot.logger.warn("We are being worker rushed!")
                 for drone in bot.units(UnitTypeId.DRONE).closer_than(60, town):
                     actions.append(drone.attack(enemy.position))
 
             if len(enemies) == 1:
-                bot.log("Enemy is probably scouting our base", logging.DEBUG)
+                bot.logger.debug("Enemy is probably scouting our base")
 
     return actions

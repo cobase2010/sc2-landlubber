@@ -1,5 +1,4 @@
 import random
-import logging
 import sc2
 import sys
 import time
@@ -10,93 +9,79 @@ from sc2.data import race_townhalls
 from sc2.player import Bot, Computer
 from sc2.position import Point3
 from bot.army import army
-from bot.army.enemy import EnemyTracker
+from bot.army.opponent import Opponent
 from bot.economy import build
 from bot.economy import economy
 from bot.economy import tech
 from bot.debug import debug
-
-logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
-logger.propagate = False
-log_format = logging.Formatter('%(levelname)-8s %(message)s')
-handler = logging.StreamHandler()
-handler.setFormatter(log_format)
-logger.addHandler(handler)
+from bot.util.log import TerminalLogger
 
 
 class MyBot(sc2.BotAI):
     def on_start(self):
-        self.enemy = EnemyTracker(self)
+        self.logger = TerminalLogger(self)
+        self.opponent = Opponent(self)
 
+        self.previous_step_duration_millis = 0.0
         self.tick_millis = 0
         self.tick_millis_since_last_base_management = 0
         self.match_start_time = time.time()
         self.score_logged = False
         self.active_expansion_builder = None
         self.active_scout_tag = None
-        self.enemy_start_locations_not_yet_scouted = []
-        self.enemy_known_base_locations = []
         self.expansions_sorted = []
         self.ramps_distance_sorted = None
-        self.init_calculation_done = False
+        self.first_step = True
         self.last_cap_covered = 0
         self.hq_loss_handled = False
         self.hq_front_door = None
         self.hq_scout_found_front_door = False
         self.army_attack_point = None
         self.army_spawn_rally_point = None
-        if self.enemy_race != Race.Random:
-            self.known_enemy_race = self.enemy_race
-        else:
-            self.known_enemy_race = None
-        logger.info("Game started, gl hf!")
+        self.logger.log("Game started, gl hf!")
 
     def on_end(self, result):
-        self.log("Game ended in " + str(result))
-        self.log("Score: " + str(self.state.score.score))
+        self.logger.log("Game ended in " + str(result))
+        self.logger.log("Score: " + str(self.state.score.score))
 
     def world_text(self, text, pos):
         if pos:
             self._client.debug_text_world(text, Point3((pos.position.x, pos.position.y, 10)), None, 14)
         else:
-            self.log("Received None position to draw text", logging.ERROR)
-
-    def log(self, msg, level=logging.INFO):
-        logger.log(level, "{:4.1f} {:3}/{:3} {}".format(self.time / 60, self.supply_used, self.supply_cap, msg))
+            self.logger.error("Received None position to draw text")
 
     async def on_step(self, iteration):
+        step_start = time.time()
         if self.time_budget_available and self.time_budget_available < 0.3:
-            self.log(f"Skipping step to avoid post-cooldown vegetable bug, budget {self.time_budget_available:.3f}", logging.ERROR)
+            self.log.error(f"Skipping step to avoid post-cooldown vegetable bug, budget {self.time_budget_available:.3f}")
             # return
             raise Exception  # TODO switch to return before deadline
         else:
-            step_start = time.time()
             await self.main_loop(iteration)
             debug.warn_for_step_duration(self, step_start)
             # try:
             # except Exception as e:
             #     print("ONLY SUCKERS CRASH!", e)
+        self.previous_step_duration_millis = (time.time() - step_start) * 1000
 
 
     # MAIN LOOP =========================================================================
     async def main_loop(self, iteration):
         self.tick_millis = int(self.time * 1000)
         if self.state.action_errors:
-            self.log(self.state.action_errors, logging.ERROR)
+            self.logger.error(self.state.action_errors)
 
-        if not self.init_calculation_done:
+        if self.first_step:
+            self.first_step = False
             start = time.time()
-            self.expansions_sorted = economy.get_expansion_order(self.expansion_locations, self.start_location, self.enemy_start_locations, logger)
-            self.enemy_start_locations_not_yet_scouted = self.enemy_start_locations
-            if len(self.enemy_start_locations) == 1:
-                self.enemy_known_base_locations.append(self.enemy_start_locations[0])
+            self.expansions_sorted = economy.get_expansion_order(self, self.expansion_locations, self.start_location, self.enemy_start_locations)
             self.hq_front_door = army.guess_front_door(self)
             self.army_attack_point = self.hq_front_door
             self.army_spawn_rally_point = self.hq_front_door
-            self.init_calculation_done = True
-            self.log("Init calculations took {:.2f}s".format(time.time() - start))
+            self.logger.log("Init calculations took {:.2f}s".format(time.time() - start))
             return
+        else:
+            self.opponent.refresh()
 
         larvae = self.units(UnitTypeId.LARVA)
         overlords = self.units(UnitTypeId.OVERLORD)
@@ -149,15 +134,15 @@ class MyBot(sc2.BotAI):
                 if self.units(UnitTypeId.ZERGLING).ready.exists:
                     scout = self.units(UnitTypeId.ZERGLING).ready.first
                     self.active_scout_tag = scout.tag
-                    self.log("Assigned a new zergling scout " + str(scout.tag), logging.INFO)
+                    self.logger.log("Assigned a new zergling scout " + str(scout.tag))
                 elif self.units(UnitTypeId.ROACHWARREN).exists and self.units(UnitTypeId.DRONE).ready.exists:
                     scout = self.units(UnitTypeId.DRONE).ready.random
                     self.active_scout_tag = scout.tag
-                    self.log("Assigned a new drone scout " + str(scout.tag), logging.INFO)
+                    self.logger.log("Assigned a new drone scout " + str(scout.tag))
             if scout:
                 if scout.is_idle:
-                    if self.enemy_start_locations_not_yet_scouted:
-                        targets = self.enemy_start_locations_not_yet_scouted
+                    if self.opponent.unverified_hq_locations:
+                        targets = self.opponent.unverified_hq_locations
                     else:
                         targets = self.expansions_sorted
                     for location in targets:
@@ -168,21 +153,7 @@ class MyBot(sc2.BotAI):
                             if scout.distance_to(ramp.top_center) < 5:
                                 self.hq_scout_found_front_door = True
                                 self.hq_front_door = ramp.top_center
-                                self.log("Scout verified front door")
-
-            if self.enemy_start_locations_not_yet_scouted and iteration % 10 == 0:
-                for i, base in enumerate(self.enemy_start_locations_not_yet_scouted):
-                    if self.units.closest_distance_to(base) < 10:
-                        self.enemy_start_locations_not_yet_scouted.pop(i)
-                        if self.known_enemy_structures and self.known_enemy_structures.closest_distance_to(base) < 20:
-                            self.enemy_known_base_locations.append(base)
-
-        # Reacting to enemy movement
-        if self.known_enemy_units and iteration % 10 == 0:
-            # Intelligence
-            if self.known_enemy_race is None:
-                self.known_enemy_race = self.known_enemy_units.first.race
-                self.log("Enemy is now known to be " + str(self.known_enemy_race))
+                                self.logger.log("Scout verified front door")
 
             actions += army.base_defend(self, forces)
 

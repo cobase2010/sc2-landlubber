@@ -1,11 +1,10 @@
-import logging
 from bot.economy import economy
 from sc2.ids.unit_typeid import UnitTypeId
 
 
 async def build_one(bot, it):
     if not (bot.units(it).exists or bot.already_pending(it)) and bot.can_afford(it):
-        bot.log(f"Building {it}")
+        bot.logger.log(f"Building {it}")
         await bot.build(it, near=bot.townhalls.first.position.towards(bot._game_info.map_center, 5))
 
 
@@ -20,7 +19,7 @@ async def ensure_extractors(bot):
                             workers = bot.workers.gathering
                             if workers.exists:
                                 worker = workers.closest_to(geyser)
-                                bot.log("Building extractor")
+                                bot.logger.log("Building extractor")
                                 await bot.do_actions([worker.build(UnitTypeId.EXTRACTOR, geyser)])
                                 return
 
@@ -40,7 +39,7 @@ async def begin_projects(bot):
     random_townhall = bot.townhalls.first
 
     if economy.should_build_hatchery(bot):
-        bot.log("Building hatchery")
+        bot.logger.log("Building hatchery")
         drone = bot.workers.random
         bot.active_expansion_builder = drone.tag
         await bot.do_actions([drone.build(UnitTypeId.HATCHERY, bot.expansions_sorted.pop(0))]) # TODO Should not be so naive that sites are available and building will succeed and remain intact
@@ -55,7 +54,7 @@ async def begin_projects(bot):
     if bot.units(UnitTypeId.ROACHWARREN).ready.exists:
         if (not bot.units(UnitTypeId.LAIR).exists or bot.already_pending(UnitTypeId.LAIR)) and random_townhall.noqueue:
             if bot.can_afford(UnitTypeId.LAIR):
-                bot.log("Building lair")
+                bot.logger.log("Building lair")
                 await bot.do_actions([random_townhall.build(UnitTypeId.LAIR)])
 
     if bot.units(UnitTypeId.LAIR).ready.exists and len(bot.townhalls.ready) > 1:
@@ -71,26 +70,26 @@ def train_units(bot, larvae):
         if town_larvae.exists:
             larva = town_larvae.random
             if should_train_overlord(bot):
-                bot.log("<-- Training overlord", logging.INFO)
+                bot.logger.log("<-- Training overlord")
                 actions.append(larva.train(UnitTypeId.OVERLORD))
                 bot.last_cap_covered = bot.supply_cap
             elif economy.should_train_drone(bot, townhall):
-                bot.log("Training drone, current situation at this expansion {}/{}".format(townhall.assigned_harvesters, townhall.ideal_harvesters), logging.DEBUG)
+                bot.logger.debug("Training drone, current situation at this expansion {}/{}".format(townhall.assigned_harvesters, townhall.ideal_harvesters))
                 actions.append(larva.train(UnitTypeId.DRONE))
             else:
                 if bot.can_afford(UnitTypeId.MUTALISK) and bot.units(UnitTypeId.SPIRE).ready.exists:
                     actions.append(larva.train(UnitTypeId.MUTALISK))
-                    bot.log("Training mutalisk", logging.DEBUG)
+                    bot.logger.debug("Training mutalisk")
                 elif bot.units(UnitTypeId.ROACHWARREN).ready.exists:
                     if bot.can_afford(UnitTypeId.ROACH):
                         actions.append(larva.train(UnitTypeId.ROACH))
-                        bot.log("Training roach", logging.DEBUG)
+                        bot.logger.debug("Training roach")
                 elif bot.can_afford(UnitTypeId.ZERGLING) and bot.units(UnitTypeId.SPAWNINGPOOL).ready.exists:
-                    bot.log("Training ling", logging.DEBUG)
+                    bot.logger.debug("Training ling")
                     actions.append(larva.train(UnitTypeId.ZERGLING))
         if bot.units(UnitTypeId.SPAWNINGPOOL).ready.exists and townhall.is_ready and townhall.noqueue:
             if bot.can_afford(UnitTypeId.QUEEN):
                 if not bot.units(UnitTypeId.QUEEN).closer_than(15, townhall):
-                    bot.log("Training queen", logging.INFO)
+                    bot.logger.log("Training queen")
                     actions.append(townhall.train(UnitTypeId.QUEEN))
     return actions
