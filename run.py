@@ -25,7 +25,7 @@ def main():
         pick_map(),
         [
             Bot(race, MyBot()),
-            Computer(Race.Random, Difficulty.Harder)
+            Computer(Race.Random, Difficulty.VeryHard)
         ],
         realtime=False,
         step_time_limit=0.5, # We use locally much stricter limit than in the competition

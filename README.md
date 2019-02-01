@@ -12,10 +12,11 @@ Forked from [Overmind-Challenge-Template](https://gitlab.com/overmind-challenge/
 
 ## Level
 
-This bot wins all races:
+This bot:
 
-- most of the time against Difficulty.Harder ("Very Hard" in-game)
-- all the time against Difficulty.Hard ("Harder" in-game)
+- loses all the time against `Difficulty.VeryHard` (*"Elite"* in-game)
+- wins most of the time against `Difficulty.Harder` (*"Very Hard"* in-game)
+- wins all the time against `Difficulty.Hard` (*"Harder"* in-game)
 
 Zerg and Protoss seem easiest, while Terran tech hardest.
 
