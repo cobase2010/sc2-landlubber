@@ -32,16 +32,6 @@ def get_simple_army_strength(units):
     double_food = units(UnitTypeId.ROACH).ready.amount + units(UnitTypeId.MUTALISK).ready.amount
     return (0.5 * half_food) + (2 * double_food)
 
-
-def nearest_enemy_building(rally, enemy_structures, enemy_start_locations):
-    if enemy_structures.exists:
-        return enemy_structures.closest_to(rally).position
-    else:
-        if enemy_start_locations:
-            return rally.closest(enemy_start_locations)
-    return None
-
-
 def guess_front_door(bot):
     # Bot has main_base_ramp but it sometimes points to the back door ramp if base has multiple ramps
     bot.ramps_distance_sorted = sorted(bot._game_info.map_ramps, key=lambda ramp: ramp.top_center.distance_to(bot.start_location))
@@ -89,10 +79,7 @@ def get_army_actions(bot, iteration, units, enemy_structures, enemy_start_locati
 
             if dispersion < ARMY_DISPERSION_MAX: # Attack!
                 bot.logger.debug(f"Tight army advancing ({dispersion:.0f})")
-                towards = nearest_enemy_building(
-                    bot.army_attack_point,
-                    enemy_structures,
-                    enemy_start_locations)
+                towards = bot.opponent.get_next_potential_base_closest_to(bot.army_attack_point)
                 if towards is None:
                     bot.logger.error("Don't know where to go!")
                     return []  # FIXME This prevents a crash on win, but we should start scouting for enemy

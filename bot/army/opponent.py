@@ -12,6 +12,7 @@ class Opponent:
         self.next_potential_location = None
         self.army_strength = 0
         self.units = None
+        self.structures = None
 
         if bot.enemy_race != Race.Random:
             self._set_race(bot.enemy_race)
@@ -32,6 +33,9 @@ class Opponent:
             if self.known_race is None:
                 self._set_race(self.units.first.race)
 
+        if self.bot.known_enemy_structures:
+            self.structures = self.bot.known_enemy_structures
+
         if self.unverified_hq_locations:
             for i, base in enumerate(self.unverified_hq_locations):
                 if self.bot.units.closest_distance_to(base) < 10:
@@ -45,5 +49,16 @@ class Opponent:
     def get_next_potential_base(self):
         raise NotImplementedError
 
-    def get_next_potential_base_closest_to(self, position):
-        raise NotImplementedError
+    def get_next_potential_base_closest_to(self, source):
+        if self.structures.exists:
+            return self.structures.closest_to(source).position
+        elif self.known_base_locations:
+            return self.known_base_locations.closest_to(source).position
+        elif self.next_potential_location:
+            return self.next_potential_location
+        elif self.unverified_hq_locations:
+            return self.unverified_hq_locations.closest_to(source).position
+        else:
+            self.logger.error("Our army has no idea where to go")
+            return None
+

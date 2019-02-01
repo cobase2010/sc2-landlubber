@@ -14,7 +14,7 @@ Forked from [Overmind-Challenge-Template](https://gitlab.com/overmind-challenge/
 
 This bot:
 
-- loses all the time against `Difficulty.VeryHard` (*"Elite"* in-game)
+- wins sometimes against `Difficulty.VeryHard` (*"Elite"* in-game)
 - wins most of the time against `Difficulty.Harder` (*"Very Hard"* in-game)
 - wins all the time against `Difficulty.Hard` (*"Harder"* in-game)
 
