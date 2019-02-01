@@ -22,7 +22,7 @@ class Opponent:
             self.unverified_hq_locations = []
 
     def _set_race(self, race):
-        self.logger.log("Enemy is now known to be " + str(self.known_race))
+        self.logger.log("Enemy is now known to be " + str(race))
         self.known_race = race
 
     def refresh(self):
@@ -30,7 +30,6 @@ class Opponent:
             self.units = self.bot.known_enemy_units
 
             if self.known_race is None:
-                print("We are refreshing Opponent")
                 self._set_race(self.units.first.race)
 
         if self.unverified_hq_locations:
