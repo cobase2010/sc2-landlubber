@@ -74,7 +74,7 @@ class MyBot(sc2.BotAI):
         if self.first_step:
             self.first_step = False
             start = time.time()
-            self.expansions_sorted = economy.get_expansion_order(self, self.expansion_locations, self.start_location, self.enemy_start_locations)
+            self.expansions_sorted = economy.get_expansion_order(self.logger, self.expansion_locations, self.start_location, self.enemy_start_locations)
             self.hq_front_door = army.guess_front_door(self)
             self.army_attack_point = self.hq_front_door
             self.army_spawn_rally_point = self.hq_front_door

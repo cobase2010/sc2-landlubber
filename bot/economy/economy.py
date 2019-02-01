@@ -40,19 +40,19 @@ def get_town_with_free_jobs(townhalls, excluded=None):
     return None
 
 
-def get_expansion_order(bot, expansion_locations, start_location, enemy_start_locations):
+def get_expansion_order(logger, expansion_locations, start_location, enemy_start_locations):
     exps = expansion_locations  # Fetching this property takes 1.6 seconds after which it is cached forever
     exps.pop(start_location)
     for enemy in enemy_start_locations:
         exps.pop(enemy)
     sorted = start_location.sort_by_distance(exps)
     if len(enemy_start_locations) != 1:
-        bot.logger.error("There are more than one enemy start location in this map! Assumptions might fail" + str(len(enemy_start_locations)))
+        logger.error("There are more than one enemy start location in this map! Assumptions might fail" + str(len(enemy_start_locations)))
     if start_location in sorted:
-        bot.logger.error("Starting location unexpectedly still in expansion locations")
+        logger.error("Starting location unexpectedly still in expansion locations")
     for enemy in enemy_start_locations:
         if enemy in sorted:
-            bot.logger.error("Enemy location unexpectedly still in expansion locations")
+            logger.error("Enemy location unexpectedly still in expansion locations")
     return sorted
 
 
