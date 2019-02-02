@@ -14,14 +14,17 @@ from bot.economy import build
 from bot.economy import economy
 from bot.economy import tech
 from bot.debug import debug
+from bot.debug.debug import DebugPrinter
 from bot.util.log import TerminalLogger
 
 
 class MyBot(sc2.BotAI):
     def on_start(self):
         self.logger = TerminalLogger(self)
+        self.debugger = DebugPrinter(self)
         self.opponent = Opponent(self)
-
+        
+        self.iteration = 0  # FIXME We should probably not time things based on steps, but time
         self.previous_step_duration_millis = 0.0
         self.tick_millis = 0
         self.tick_millis_since_last_base_management = 0
@@ -52,7 +55,7 @@ class MyBot(sc2.BotAI):
 
     async def on_step(self, iteration):
         # TODO FIXME Before the deadline, switch raise to return and wrap in try-except
-
+        self.iteration = iteration
         step_start = time.time()
         budget = self.time_budget_available  # pylint: disable=no-member
         if budget and budget < 0.3:
@@ -60,8 +63,8 @@ class MyBot(sc2.BotAI):
             # return
             raise Exception
         else:
-            await self.main_loop(iteration)
-            debug.warn_for_step_duration(self, step_start)
+            await self.main_loop()
+            self.debugger.warn_for_step_duration(step_start)
             # try:
             # except Exception as e:
             #     print("ONLY SUCKERS CRASH!", e)
@@ -69,7 +72,7 @@ class MyBot(sc2.BotAI):
 
 
     # MAIN LOOP =========================================================================
-    async def main_loop(self, iteration):
+    async def main_loop(self):
         self.tick_millis = int(self.time * 1000)
         if self.state.action_errors:
             self.logger.error(self.state.action_errors)
@@ -99,7 +102,7 @@ class MyBot(sc2.BotAI):
 
         actions += army.get_army_actions(
             self,
-            iteration,
+            self.iteration, # <- TODO remove iteration
             # TODO we should filter out non-fighting
             forces, #forces.idle,  # TODO all_units or just idle?
             self.known_enemy_structures,
@@ -162,8 +165,8 @@ class MyBot(sc2.BotAI):
 
         await self.do_actions(actions)
 
-        debug.warn_unoptimal_play(self, iteration)
-        debug.print_score(self, iteration)
-        debug.print_running_speed(self, iteration)
+        self.debugger.warn_unoptimal_play()
+        self.debugger.print_score()
+        self.debugger.print_running_speed()
         self.world_text("door", self.hq_front_door)
         await self._client.send_debug()
