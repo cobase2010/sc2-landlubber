@@ -4,7 +4,6 @@ import statistics
 from sc2.ids.unit_typeid import UnitTypeId
 from sc2.helpers import ControlGroup
 from bot.util import util
-# from bot.debug import headless_render
 
 MAX_BASE_DOOR_RANGE = 30
 ARMY_SIZE_BASE_LEVEL = 200
@@ -122,7 +121,6 @@ class ArmyManager:
 
             bot.army_attack_point = towards
             bot.debugger.world_text("towards", towards)
-            # headless.render_army(bot, all_units)
             for unit in units:
                 actions.append(unit.attack(bot.army_attack_point))
         return actions

@@ -41,7 +41,7 @@ class MyBot(sc2.BotAI):
         self.hq_front_door = None
         self.hq_scout_found_front_door = False
         self.army_attack_point = None
-        self.army_spawn_rally_point = None
+        self.spawn_rally = None
         self.logger.log("Game started, gl hf!")
 
     # Deferred actions after game state is available
@@ -51,7 +51,7 @@ class MyBot(sc2.BotAI):
         self.expansions_sorted = economy.get_expansion_order(self.logger, self.expansion_locations, self.start_location)
         self.hq_front_door = self.army.guess_front_door()
         self.army_attack_point = self.hq_front_door
-        self.army_spawn_rally_point = self.hq_front_door
+        self.spawn_rally = self.hq_front_door
         self.opponent.deferred_init()
         self.logger.log("First step took {:.2f}s".format(time.time() - start))
 
@@ -109,12 +109,7 @@ class MyBot(sc2.BotAI):
             self.enemy_start_locations)
 
         if self.build_timer.rings:
-            # Hatchery rally points
-            for hatch in self.townhalls:
-                actions.append(hatch(AbilityId.RALLY_HATCHERY_UNITS, self.army_spawn_rally_point))
-                if not hatch.is_ready:
-                    actions.append(hatch(AbilityId.RALLY_HATCHERY_WORKERS, economy.get_closest_mineral_for_hatchery(self.state.mineral_field(), hatch)))
-
+            actions += economy.set_hatchery_rally_points(self)
             actions += self.builder.train_units(larvae)
             await self.builder.begin_projects()
             await economy.reassign_overideal_drones(self)

@@ -118,3 +118,12 @@ def assign_idle_drones_to_minerals(bot):
             mineral = get_closest_mineral_for_hatchery(bot.state.mineral_field(), new_town)
             actions.append(drone.gather(mineral))
     return actions
+
+
+def set_hatchery_rally_points(bot):
+    actions = []
+    for hatch in bot.townhalls:
+        actions.append(hatch(AbilityId.RALLY_HATCHERY_UNITS, bot.spawn_rally))
+        if not hatch.is_ready:
+            actions.append(hatch(AbilityId.RALLY_HATCHERY_WORKERS, get_closest_mineral_for_hatchery(bot.state.mineral_field(), hatch)))
+    return actions
