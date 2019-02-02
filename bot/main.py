@@ -15,6 +15,7 @@ from bot.economy import tech
 from bot.debug import debug
 from bot.debug.debug import DebugPrinter
 from bot.util.log import TerminalLogger
+from bot.util.timer import Timer
 
 
 class MyBot(sc2.BotAI):
@@ -23,12 +24,12 @@ class MyBot(sc2.BotAI):
         self.debugger = DebugPrinter(self)
         self.opponent = Opponent(self)
         self.builder = Builder(self)
+        
+        self.army_actions_timer = Timer(self, 0.1)
+        self.build_timer = Timer(self, 0.5)
+        self.match_status_timer = Timer(self, 60)
+        self.warn_timer = Timer(self, 1)
 
-        self.iteration = -1  # FIXME We should probably not time things based on steps, but time
-        self.previous_step_duration_millis = 0.0
-        self.tick_millis = 0
-        self.tick_millis_since_last_base_management = 0
-        self.match_start_time = time.time()
         self.score_logged = False
         self.active_expansion_builder = None
         self.active_scout_tag = None
@@ -48,10 +49,6 @@ class MyBot(sc2.BotAI):
 
     async def on_step(self, iteration):
         # TODO FIXME Before the deadline, switch raise to return and wrap in try-except
-        if iteration != self.iteration + 1:
-            self.logger.error(f"Iteration desync, now={iteration}, previous={self.iteration}")
-        self.iteration = iteration
-
         step_start = time.time()
         budget = self.time_budget_available  # pylint: disable=no-member
         if budget and budget < 0.3:
@@ -64,12 +61,10 @@ class MyBot(sc2.BotAI):
             # try:
             # except Exception as e:
             #     print("ONLY SUCKERS CRASH!", e)
-        self.previous_step_duration_millis = (time.time() - step_start) * 1000
 
 
     # MAIN LOOP =========================================================================
     async def main_loop(self):
-        self.tick_millis = int(self.time * 1000)
         if self.state.action_errors:
             self.logger.error(self.state.action_errors)
 
@@ -98,7 +93,7 @@ class MyBot(sc2.BotAI):
 
         actions += army.get_army_actions(
             self,
-            self.iteration, # <- TODO remove iteration
+            self.army_actions_timer,
             # TODO we should filter out non-fighting
             forces, #forces.idle,  # TODO all_units or just idle?
             self.known_enemy_structures,
@@ -112,10 +107,7 @@ class MyBot(sc2.BotAI):
             self.start_location,
             self.enemy_start_locations)
 
-        # Non-time-critical
-        if (self.tick_millis - self.tick_millis_since_last_base_management) >= 500:
-            self.tick_millis_since_last_base_management = self.tick_millis
-
+        if self.build_timer.rings:
             # Hatchery rally points
             for hatch in self.townhalls:
                 actions.append(hatch(AbilityId.RALLY_HATCHERY_UNITS, self.army_spawn_rally_point))
@@ -161,8 +153,9 @@ class MyBot(sc2.BotAI):
 
         await self.do_actions(actions)
 
-        self.debugger.warn_unoptimal_play()
-        self.debugger.print_score()
-        self.debugger.print_running_speed()
+        if self.match_status_timer.rings:
+            self.debugger.print_score()
+        if self.warn_timer.rings:
+            self.debugger.warn_unoptimal_play()
         self.debugger.world_text("door", self.hq_front_door)
         await self._client.send_debug()

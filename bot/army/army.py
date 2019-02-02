@@ -64,9 +64,9 @@ def unit_dispersion(units, bot):
 
 
 # Attack to enemy base
-def get_army_actions(bot, iteration, units, enemy_structures, enemy_start_locations, all_units, game_time, supply_used):
+def get_army_actions(bot, timer, units, enemy_structures, enemy_start_locations, all_units, game_time, supply_used):
     actions = []
-    if units and iteration % 10 == 0:
+    if units and timer.rings:
         bot.debugger.world_text("center", units.center)
         strength = get_simple_army_strength(all_units) # TODO all_units or just idle?
         enough = (ARMY_SIZE_BASE_LEVEL + ((game_time / 60) * ARMY_SIZE_TIME_MULTIPLIER))

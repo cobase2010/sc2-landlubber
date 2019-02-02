@@ -15,9 +15,8 @@ class TerminalLogger:
     def log(self, msg, level=logging.INFO):
         try:
             if hasattr(self.bot, "state"):
-                self.logger.log(level, "{:4.1f} {:3.0f} {:3}/{:<3} {}".format(
+                self.logger.log(level, "{:4.1f} {:3}/{:<3} {}".format(
                     self.bot.time / 60,
-                    self.bot.previous_step_duration_millis,
                     self.bot.supply_used, 
                     self.bot.supply_cap,
                     msg))
