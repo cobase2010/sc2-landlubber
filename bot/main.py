@@ -85,22 +85,18 @@ class MyBot(sc2.BotAI):
             return
         else:
             self.opponent.refresh()
+            self.army.refresh()
 
         larvae = self.units(UnitTypeId.LARVA)
         overlords = self.units(UnitTypeId.OVERLORD)
-        forces = self.units(UnitTypeId.ZERGLING).ready | self.units(UnitTypeId.ROACH).ready | self.units(UnitTypeId.HYDRALISK).ready | self.units(UnitTypeId.MUTALISK).ready
-        # forces_ground = self.units(UnitTypeId.ZERGLING) | self.units(UnitTypeId.ROACH) | self.units(UnitTypeId.HYDRALISK)
-        # forces_air = self.units(UnitTypeId.MUTALISK)
         actions = []
 
         if not self.townhalls.exists:
-            await self.army.kamikaze(forces)
+            await self.army.kamikaze()
             return
 
         actions += self.army.get_army_actions(
             self.army_actions_timer,
-            # TODO we should filter out non-fighting
-            forces, #forces.idle,  # TODO all_units or just idle?
             self.known_enemy_structures,
             self.enemy_start_locations,
             self.units,  # TODO all_units or just idle?
@@ -154,7 +150,7 @@ class MyBot(sc2.BotAI):
                                 self.hq_front_door = ramp.top_center
                                 self.logger.log("Scout verified front door")
 
-            actions += self.army.base_defend(forces)
+            actions += self.army.base_defend()
 
         await self.do_actions(actions)
 

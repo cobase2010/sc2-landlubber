@@ -2,6 +2,7 @@ import time
 import random
 import statistics
 from sc2.ids.unit_typeid import UnitTypeId
+from sc2.helpers import ControlGroup
 from bot.util import util
 # from bot.debug import headless_render
 
@@ -16,16 +17,35 @@ ARMY_MAIN_FORCE_RADIUS = 25 # 15 yo-yos too much back and forth, 30 is almost sl
 class ArmyManager:
     def __init__(self, bot):
         self.bot = bot
+        self.logger = bot.logger
+        self.opponent = bot.opponent
 
-    async def kamikaze(self, forces):
+        self.all_combat_units = None
+        self.reserve = ControlGroup([])
+        self.scouts = ControlGroup([])
+
+    def refresh(self):
+        self.all_combat_units = self.bot.units(UnitTypeId.ZERGLING).ready | self.bot.units(UnitTypeId.ROACH).ready | self.bot.units(UnitTypeId.HYDRALISK).ready | self.bot.units(UnitTypeId.MUTALISK).ready
+        """
+        ControlGroup is actually just a set of unit tags. When units whose tag is added to a CG die, their tags remains in the CG. This is probably not
+        a problem, but we could also cleanup the CGs by cycling tags into units and then back to tags. Not sure if worth it performance-wise.
+        1) alive = self.bot.units.ready.tags_in(self.reserve)
+        2) alive = self.reserve.select_units(self.all_combat_units)
+        """
+
+        unassigned = self.all_combat_units.tags_not_in(self.reserve | self.scouts)
+        if unassigned:
+            self.reserve.add_units(unassigned)
+        
+    async def kamikaze(self):
         bot = self.bot
         if not bot.hq_loss_handled:
             try:
                 actions = []
                 bot.hq_loss_handled = True
-                bot.logger.warn("All townhalls lost, loss is probably imminent!")
+                self.logger.warn("All townhalls lost, loss is probably imminent!")
                 if bot.enemy_start_locations:
-                    for unit in bot.units(UnitTypeId.DRONE) | bot.units(UnitTypeId.QUEEN) | forces:
+                    for unit in bot.units(UnitTypeId.DRONE) | bot.units(UnitTypeId.QUEEN) | self.all_combat_units:
                         actions.append(unit.attack(bot.enemy_start_locations[0]))
                     await bot.do_actions(actions)
             except Exception as e:
@@ -40,10 +60,10 @@ class ArmyManager:
             if ramp.top_center.distance_to(bot.start_location) <= MAX_BASE_DOOR_RANGE:
                 doors.append(ramp)
         if len(doors) == 1:
-            bot.logger.log("This base seems to have only one ramp")
+            self.logger.log("This base seems to have only one ramp")
             return doors[0].top_center
         else:
-            bot.logger.warn("This base seems to several ramps, let's wait for scout to determine front door")
+            self.logger.warn("This base seems to several ramps, let's wait for scout to determine front door")
             return bot.start_location.towards(bot.game_info.map_center, 5)
 
 
@@ -65,38 +85,39 @@ class ArmyManager:
 
 
     # Attack to enemy base
-    def get_army_actions(self, timer, units, enemy_structures, enemy_start_locations, all_units, game_time, supply_used):
+    def get_army_actions(self, timer, enemy_structures, enemy_start_locations, all_units, game_time, supply_used):
         bot = self.bot
         actions = []
+        units = self.all_combat_units  # TEMP
         if units and timer.rings:
             bot.debugger.world_text("center", units.center)
             strength = util.get_units_strength(bot, all_units) # TODO all_units or just idle?
             enough = (ARMY_SIZE_BASE_LEVEL + ((game_time / 60) * ARMY_SIZE_TIME_MULTIPLIER))
             if self.enemy_is_building_on_our_side_of_the_map():
-                bot.logger.warn("Enemy is building on our side of the map!")
+                self.logger.warn("Enemy is building on our side of the map!")
                 enough = ARMY_SIZE_BASE_LEVEL
             towards = None
             if (strength >= enough or supply_used > ARMY_SIZE_MAX):
                 dispersion = self._unit_dispersion(units)
 
                 if dispersion < ARMY_DISPERSION_MAX: # Attack!
-                    bot.logger.debug(f"Tight army advancing ({dispersion:.0f})")
+                    self.logger.debug(f"Tight army advancing ({dispersion:.0f})")
                     towards = bot.opponent.get_next_potential_base_closest_to(bot.army_attack_point)
                     if towards is None:
-                        bot.logger.error("Don't know where to go!")
+                        self.logger.error("Don't know where to go!")
                         return []  # FIXME This prevents a crash on win, but we should start scouting for enemy
 
                 else: # Regroup, too dispersed
                     main_force = units.closer_than(ARMY_MAIN_FORCE_RADIUS, units.center)
                     if main_force:
-                        bot.logger.debug(f"Army is slightly dispersed ({dispersion:.0f})")
+                        self.logger.debug(f"Army is slightly dispersed ({dispersion:.0f})")
                         towards = main_force.center
                     else:
-                        bot.logger.debug(f"Army is TOTALLY scattered")
+                        self.logger.debug(f"Army is TOTALLY scattered")
                         towards = units.center
 
             else: # Retreat, too weak!
-                bot.logger.debug(f"Army is too small, retreating!")
+                self.logger.debug(f"Army is too small, retreating!")
                 towards = bot.hq_front_door
 
             bot.army_attack_point = towards
@@ -133,14 +154,14 @@ class ArmyManager:
 
 
     # Base defend
-    def base_defend(self, forces):
+    def base_defend(self):
         bot = self.bot
         actions = []
         for town in bot.townhalls:
             enemies = bot.known_enemy_units.closer_than(20, town)
             if enemies:
                 enemy = enemies.closest_to(town)
-                defenders = forces.idle.closer_than(40, town)
+                defenders = self.all_combat_units.idle.closer_than(40, town)
                 if defenders:
                     bot.logger.debug(f"Defending our base with {defenders.amount} units against {enemies.amount} enemies")
                     for unit in defenders:
