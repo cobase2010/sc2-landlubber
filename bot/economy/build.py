@@ -23,14 +23,14 @@ async def ensure_extractors(bot):
                                 await bot.do_actions([worker.build(UnitTypeId.EXTRACTOR, geyser)])
                                 return
 
-
 def should_train_overlord(bot):
     if bot.can_afford(UnitTypeId.OVERLORD):
         if bot.units(UnitTypeId.OVERLORD).amount == 1:
-            cap_safety_buffer = 0
+            required_buffer = 0
         else:
-            cap_safety_buffer = int((bot.townhalls.ready.amount + bot.units(UnitTypeId.QUEEN).ready.amount) * 0.45 + 2)
-        should = bot.supply_left <= cap_safety_buffer and bot.supply_cap != bot.last_cap_covered and bot.supply_cap < 200
+            required_buffer = int((bot.townhalls.ready.amount + bot.units(UnitTypeId.QUEEN).ready.amount) * 0.45 + 2)
+        buffer = bot.supply_left + (bot.already_pending(UnitTypeId.OVERLORD) * 8)
+        should = buffer <= required_buffer and bot.supply_cap < 200
         return should
 
 
@@ -72,7 +72,6 @@ def train_units(bot, larvae):
             if should_train_overlord(bot):
                 bot.logger.log("<-- Training overlord")
                 actions.append(larva.train(UnitTypeId.OVERLORD))
-                bot.last_cap_covered = bot.supply_cap
             elif economy.should_train_drone(bot, townhall):
                 bot.logger.debug("Training drone, current situation at this expansion {}/{}".format(townhall.assigned_harvesters, townhall.ideal_harvesters))
                 actions.append(larva.train(UnitTypeId.DRONE))

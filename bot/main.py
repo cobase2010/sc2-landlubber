@@ -34,7 +34,6 @@ class MyBot(sc2.BotAI):
         self.expansions_sorted = []
         self.ramps_distance_sorted = None
         self.first_step = True
-        self.last_cap_covered = 0
         self.hq_loss_handled = False
         self.hq_front_door = None
         self.hq_scout_found_front_door = False
