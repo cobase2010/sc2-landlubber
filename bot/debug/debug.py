@@ -1,13 +1,19 @@
 import time
 from sc2.ids.unit_typeid import UnitTypeId
+from sc2.position import Point3
 
 STEP_DURATION_WARNING_MILLIS = 50
-
 
 class DebugPrinter:
     def __init__(self, bot):
         self.bot = bot
         self.logger = bot.logger
+
+    def world_text(self, text, pos):
+        if pos:
+            self.bot._client.debug_text_world(text, Point3((pos.position.x, pos.position.y, 10)), None, 14)
+        else:
+            self.logger.error("Received None position to draw text")
 
     def print_running_speed(self):
         iteration = self.bot.iteration

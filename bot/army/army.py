@@ -67,7 +67,7 @@ def unit_dispersion(units, bot):
 def get_army_actions(bot, iteration, units, enemy_structures, enemy_start_locations, all_units, game_time, supply_used):
     actions = []
     if units and iteration % 10 == 0:
-        bot.world_text("center", units.center)
+        bot.debugger.world_text("center", units.center)
         strength = get_simple_army_strength(all_units) # TODO all_units or just idle?
         enough = (ARMY_SIZE_BASE_LEVEL + ((game_time / 60) * ARMY_SIZE_TIME_MULTIPLIER))
         if enemy_is_building_on_our_side_of_the_map(bot):
@@ -98,7 +98,7 @@ def get_army_actions(bot, iteration, units, enemy_structures, enemy_start_locati
             towards = bot.hq_front_door
 
         bot.army_attack_point = towards
-        bot.world_text("towards", towards)
+        bot.debugger.world_text("towards", towards)
         # headless.render_army(bot, all_units)
         for unit in units:
             actions.append(unit.attack(bot.army_attack_point))

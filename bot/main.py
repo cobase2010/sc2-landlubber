@@ -7,7 +7,6 @@ from sc2.ids.unit_typeid import UnitTypeId
 from sc2.ids.ability_id import AbilityId
 from sc2.data import race_townhalls
 from sc2.player import Bot, Computer
-from sc2.position import Point3
 from bot.army import army
 from bot.army.opponent import Opponent
 from bot.economy import build
@@ -24,7 +23,7 @@ class MyBot(sc2.BotAI):
         self.debugger = DebugPrinter(self)
         self.opponent = Opponent(self)
         
-        self.iteration = 0  # FIXME We should probably not time things based on steps, but time
+        self.iteration = -1  # FIXME We should probably not time things based on steps, but time
         self.previous_step_duration_millis = 0.0
         self.tick_millis = 0
         self.tick_millis_since_last_base_management = 0
@@ -47,15 +46,12 @@ class MyBot(sc2.BotAI):
         self.logger.log("Game ended in " + str(result))
         self.logger.log("Score: " + str(self.state.score.score))
 
-    def world_text(self, text, pos):
-        if pos:
-            self._client.debug_text_world(text, Point3((pos.position.x, pos.position.y, 10)), None, 14)
-        else:
-            self.logger.error("Received None position to draw text")
-
     async def on_step(self, iteration):
         # TODO FIXME Before the deadline, switch raise to return and wrap in try-except
+        if iteration != self.iteration + 1:
+            self.logger.error(f"Iteration desync, now={iteration}, previous={self.iteration}")
         self.iteration = iteration
+
         step_start = time.time()
         budget = self.time_budget_available  # pylint: disable=no-member
         if budget and budget < 0.3:
@@ -168,5 +164,5 @@ class MyBot(sc2.BotAI):
         self.debugger.warn_unoptimal_play()
         self.debugger.print_score()
         self.debugger.print_running_speed()
-        self.world_text("door", self.hq_front_door)
+        self.debugger.world_text("door", self.hq_front_door)
         await self._client.send_debug()
