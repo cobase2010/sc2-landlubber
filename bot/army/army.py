@@ -2,11 +2,12 @@ import time
 import random
 import statistics
 from sc2.ids.unit_typeid import UnitTypeId
+from bot.util import util
 # from bot.debug import headless_render
 
 MAX_BASE_DOOR_RANGE = 30
-ARMY_SIZE_BASE_LEVEL = 4
-ARMY_SIZE_TIME_MULTIPLIER = 2.8
+ARMY_SIZE_BASE_LEVEL = 200
+ARMY_SIZE_TIME_MULTIPLIER = 80
 ARMY_SIZE_MAX = 180
 ARMY_DISPERSION_MAX = 15
 ARMY_MAIN_FORCE_RADIUS = 25 # 15 yo-yos too much back and forth, 30 is almost slightly too string-like march.
@@ -29,13 +30,6 @@ class ArmyManager:
                     await bot.do_actions(actions)
             except Exception as e:
                 print(e)
-
-
-    def get_simple_army_strength(self, units):
-        # TODO maybe this should be based on mineral+gas cost instead of food? Roach and muta require same food but different cost
-        half_food = units(UnitTypeId.ZERGLING).ready.amount
-        double_food = units(UnitTypeId.ROACH).ready.amount + units(UnitTypeId.MUTALISK).ready.amount
-        return (0.5 * half_food) + (2 * double_food)
 
     def guess_front_door(self):
         bot = self.bot
@@ -76,7 +70,7 @@ class ArmyManager:
         actions = []
         if units and timer.rings:
             bot.debugger.world_text("center", units.center)
-            strength = self.get_simple_army_strength(all_units) # TODO all_units or just idle?
+            strength = util.get_units_strength(bot, all_units) # TODO all_units or just idle?
             enough = (ARMY_SIZE_BASE_LEVEL + ((game_time / 60) * ARMY_SIZE_TIME_MULTIPLIER))
             if self.enemy_is_building_on_our_side_of_the_map():
                 bot.logger.warn("Enemy is building on our side of the map!")
