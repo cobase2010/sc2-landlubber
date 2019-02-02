@@ -7,7 +7,7 @@ from sc2.ids.unit_typeid import UnitTypeId
 from sc2.ids.ability_id import AbilityId
 from sc2.data import race_townhalls
 from sc2.player import Bot, Computer
-from bot.army import army
+from bot.army.army import ArmyManager
 from bot.army.opponent import Opponent
 from bot.economy.build import Builder
 from bot.economy import economy
@@ -24,6 +24,7 @@ class MyBot(sc2.BotAI):
         self.debugger = DebugPrinter(self)
         self.opponent = Opponent(self)
         self.builder = Builder(self)
+        self.army = ArmyManager(self)
         
         self.army_actions_timer = Timer(self, 0.1)
         self.build_timer = Timer(self, 0.5)
@@ -72,7 +73,7 @@ class MyBot(sc2.BotAI):
             self.first_step = False
             start = time.time()
             self.expansions_sorted = economy.get_expansion_order(self.logger, self.expansion_locations, self.start_location)
-            self.hq_front_door = army.guess_front_door(self)
+            self.hq_front_door = self.army.guess_front_door()
             self.army_attack_point = self.hq_front_door
             self.army_spawn_rally_point = self.hq_front_door
             self.logger.log("Init calculations took {:.2f}s".format(time.time() - start))
@@ -88,11 +89,10 @@ class MyBot(sc2.BotAI):
         actions = []
 
         if not self.townhalls.exists:
-            await army.kamikaze(self, forces)
+            await self.army.kamikaze(forces)
             return
 
-        actions += army.get_army_actions(
-            self,
+        actions += self.army.get_army_actions(
             self.army_actions_timer,
             # TODO we should filter out non-fighting
             forces, #forces.idle,  # TODO all_units or just idle?
@@ -101,7 +101,7 @@ class MyBot(sc2.BotAI):
             self.units,  # TODO all_units or just idle?
             self.time,
             self.supply_used)
-        actions += army.patrol_with_overlords(
+        actions += self.army.patrol_with_overlords(
             overlords,
             self.hq_front_door,
             self.start_location,
@@ -149,7 +149,7 @@ class MyBot(sc2.BotAI):
                                 self.hq_front_door = ramp.top_center
                                 self.logger.log("Scout verified front door")
 
-            actions += army.base_defend(self, forces)
+            actions += self.army.base_defend(forces)
 
         await self.do_actions(actions)
 
