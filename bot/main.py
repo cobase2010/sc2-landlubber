@@ -51,11 +51,14 @@ class MyBot(sc2.BotAI):
             self.logger.error("Received None position to draw text")
 
     async def on_step(self, iteration):
+        # TODO FIXME Before the deadline, switch raise to return and wrap in try-except
+
         step_start = time.time()
-        if self.time_budget_available and self.time_budget_available < 0.3:
-            self.log.error(f"Skipping step to avoid post-cooldown vegetable bug, budget {self.time_budget_available:.3f}")
+        budget = self.time_budget_available  # pylint: disable=no-member
+        if budget and budget < 0.3:
+            self.logger.error(f"Skipping step to avoid post-cooldown vegetable bug, budget {budget:.3f}")
             # return
-            raise Exception  # TODO switch to return before deadline
+            raise Exception
         else:
             await self.main_loop(iteration)
             debug.warn_for_step_duration(self, step_start)
