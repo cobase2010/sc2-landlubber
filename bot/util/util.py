@@ -13,5 +13,4 @@ def get_units_strength(bot, units):
         else:
             cost = bot._game_data.units[unit.type_id.value].cost
             strength += cost.minerals + cost.vespene
-    print(strength)
     return strength

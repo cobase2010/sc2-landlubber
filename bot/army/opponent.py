@@ -8,6 +8,7 @@ class Opponent:
 
         self.known_race = None
         self.known_hq_location = None
+        self.known_natural = None
         self.unverified_hq_locations = bot.enemy_start_locations
         self.next_potential_location = None
         self.army_strength = 0
@@ -17,14 +18,23 @@ class Opponent:
         if bot.enemy_race != Race.Random:
             self._set_race(bot.enemy_race)
 
-        if len(bot.enemy_start_locations) == 1:
-            self.logger.log("We know exactly where our enemy HQ is")
-            self.known_hq_location = bot.enemy_start_locations[0]
-            self.unverified_hq_locations = []
+    def _set_enemy_hq_and_natural(self, pos):
+        self.known_hq_location = pos
+        self.logger.log(f"Found enemy base {pos}")
+        locs = list(self.bot.expansion_locations)
+        locs.remove(pos)
+        self.known_natural = pos.closest(locs)
+        self.logger.log(f"Enemy natural {self.known_natural}")
 
     def _set_race(self, race):
         self.logger.log("Enemy is now known to be " + str(race))
         self.known_race = race
+
+    def deferred_init(self):
+        if len(self.bot.enemy_start_locations) == 1:
+            self.logger.log("We know exactly where our enemy HQ is")
+            self._set_enemy_hq_and_natural(self.bot.enemy_start_locations[0])
+            self.unverified_hq_locations = []
 
     def refresh(self):
         if self.bot.known_enemy_units:
@@ -39,10 +49,9 @@ class Opponent:
             for i, base in enumerate(self.unverified_hq_locations):
                 if self.bot.units.closest_distance_to(base) < 10:
                     self.unverified_hq_locations.pop(i)
-                    if self.bot.known_enemy_structures and self.bot.known_enemy_structures.closest_distance_to(base) < 20:
+                    if self.structures and self.structures.closest_distance_to(base) < 20:
                         if not self.known_hq_location:
-                            self.known_hq_location = base
-                            self.logger.log(f"Found enemy base {base}")
+                            self._set_enemy_hq_and_natural(base)
                     else:
                         self.logger.log(f"Scouted potential enemy hq location {base} which turned out empty")
 

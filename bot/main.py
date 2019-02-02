@@ -44,6 +44,17 @@ class MyBot(sc2.BotAI):
         self.army_spawn_rally_point = None
         self.logger.log("Game started, gl hf!")
 
+    # Deferred actions after game state is available
+    def on_first_step(self):
+        self.first_step = False
+        start = time.time()
+        self.expansions_sorted = economy.get_expansion_order(self.logger, self.expansion_locations, self.start_location)
+        self.hq_front_door = self.army.guess_front_door()
+        self.army_attack_point = self.hq_front_door
+        self.army_spawn_rally_point = self.hq_front_door
+        self.opponent.deferred_init()
+        self.logger.log("First step took {:.2f}s".format(time.time() - start))
+
     def on_end(self, result):
         self.logger.log("Game ended in " + str(result))
         self.logger.log("Score: " + str(self.state.score.score))
@@ -70,13 +81,7 @@ class MyBot(sc2.BotAI):
             self.logger.error(self.state.action_errors)
 
         if self.first_step:
-            self.first_step = False
-            start = time.time()
-            self.expansions_sorted = economy.get_expansion_order(self.logger, self.expansion_locations, self.start_location)
-            self.hq_front_door = self.army.guess_front_door()
-            self.army_attack_point = self.hq_front_door
-            self.army_spawn_rally_point = self.hq_front_door
-            self.logger.log("Init calculations took {:.2f}s".format(time.time() - start))
+            self.on_first_step()
             return
         else:
             self.opponent.refresh()
