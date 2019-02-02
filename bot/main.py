@@ -9,7 +9,7 @@ from sc2.data import race_townhalls
 from sc2.player import Bot, Computer
 from bot.army import army
 from bot.army.opponent import Opponent
-from bot.economy import build
+from bot.economy.build import Builder
 from bot.economy import economy
 from bot.economy import tech
 from bot.debug import debug
@@ -22,7 +22,8 @@ class MyBot(sc2.BotAI):
         self.logger = TerminalLogger(self)
         self.debugger = DebugPrinter(self)
         self.opponent = Opponent(self)
-        
+        self.builder = Builder(self)
+
         self.iteration = -1  # FIXME We should probably not time things based on steps, but time
         self.previous_step_duration_millis = 0.0
         self.tick_millis = 0
@@ -121,8 +122,8 @@ class MyBot(sc2.BotAI):
                 if not hatch.is_ready:
                     actions.append(hatch(AbilityId.RALLY_HATCHERY_WORKERS, economy.get_closest_mineral_for_hatchery(self.state.mineral_field(), hatch)))
 
-            actions += build.train_units(self, larvae)
-            await build.begin_projects(self)
+            actions += self.builder.train_units(larvae)
+            await self.builder.begin_projects()
             await economy.reassign_overideal_drones(self)
             actions += tech.upgrade_tech(self)
             actions += await economy.produce_larvae(self)
