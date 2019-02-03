@@ -88,6 +88,10 @@ def get_closest_mineral_for_hatchery(minerals, hatch):
     return minerals.closest_to(hatch.position)
 
 
+def get_drone_actions(self):
+    return assign_idle_drones_to_minerals(self) + assign_drones_to_extractors(self)
+
+
 def assign_drones_to_extractors(bot):
     actions = []
     for extractor in bot.units(UnitTypeId.EXTRACTOR):

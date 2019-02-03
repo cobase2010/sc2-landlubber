@@ -1,19 +1,18 @@
 import random
-import sc2
 import sys
 import time
-from sc2 import Race, Difficulty
-from sc2.ids.unit_typeid import UnitTypeId
-from sc2.ids.ability_id import AbilityId
+import sc2
+from sc2 import Difficulty, Race
 from sc2.data import race_townhalls
+from sc2.ids.ability_id import AbilityId
+from sc2.ids.unit_typeid import UnitTypeId
 from sc2.player import Bot, Computer
 from bot.army.army import ArmyManager
 from bot.army.opponent import Opponent
-from bot.economy.build import Builder
-from bot.economy import economy
-from bot.economy import tech
 from bot.debug import debug
 from bot.debug.debug import DebugPrinter
+from bot.economy import economy, tech
+from bot.economy.build import Builder
 from bot.util.log import TerminalLogger
 from bot.util.timer import Timer
 
@@ -26,14 +25,13 @@ class MyBot(sc2.BotAI):
         self.builder = Builder(self)
         self.army = ArmyManager(self)
         
-        self.army_actions_timer = Timer(self, 0.1)
+        self.army_timer = Timer(self, 0.1)
         self.build_timer = Timer(self, 0.5)
         self.match_status_timer = Timer(self, 60)
         self.warn_timer = Timer(self, 3)
 
         self.score_logged = False
         self.active_expansion_builder = None
-        self.active_scout_tag = None
         self.expansions_sorted = []
         self.ramps_distance_sorted = None
         self.first_step = True
@@ -42,7 +40,6 @@ class MyBot(sc2.BotAI):
         self.hq_scout_found_front_door = False
         self.army_attack_point = None
         self.spawn_rally = None
-        self.logger.log("Game started, gl hf!")
 
     # Deferred actions after game state is available
     def on_first_step(self):
@@ -56,8 +53,7 @@ class MyBot(sc2.BotAI):
         self.logger.log("First step took {:.2f}s".format(time.time() - start))
 
     def on_end(self, result):
-        self.logger.log("Game ended in " + str(result))
-        self.logger.log("Score: " + str(self.state.score.score))
+        self.logger.log(f"Game ended in {result} with score {self.state.score.score}")
 
     async def on_step(self, iteration):
         # TODO FIXME Before the deadline, switch raise to return and wrap in try-except
@@ -74,78 +70,34 @@ class MyBot(sc2.BotAI):
             # except Exception as e:
             #     print("ONLY SUCKERS CRASH!", e)
 
-
-    # MAIN LOOP =========================================================================
     async def main_loop(self):
         if self.state.action_errors:
             self.logger.error(self.state.action_errors)
-
         if self.first_step:
             self.on_first_step()
             return
         else:
             self.opponent.refresh()
             self.army.refresh()
-
-        larvae = self.units(UnitTypeId.LARVA)
-        overlords = self.units(UnitTypeId.OVERLORD)
-        actions = []
-
         if not self.townhalls.exists:
             await self.army.kamikaze()
             return
 
-        actions += self.army.get_army_actions(
-            self.army_actions_timer,
-            self.known_enemy_structures,
-            self.enemy_start_locations,
-            self.units,  # TODO all_units or just idle?
-            self.time,
-            self.supply_used)
-        actions += self.army.patrol_with_overlords(
-            overlords,
-            self.hq_front_door,
-            self.start_location,
-            self.enemy_start_locations)
+        actions = []
+        if self.army_timer.rings:
+            actions += self.army.get_army_actions()
+            actions += self.army.patrol_with_overlords()
+            actions += self.army.legacy_scouting()
+            actions += self.army.base_defend()
 
         if self.build_timer.rings:
             actions += economy.set_hatchery_rally_points(self)
-            actions += self.builder.train_units(larvae)
+            actions += self.builder.train_units()
             await self.builder.begin_projects()
-            await economy.reassign_overideal_drones(self)
+            await economy.reassign_overideal_drones(self)  # TODO combine to drone actions below
             actions += tech.upgrade_tech(self)
             actions += await economy.produce_larvae(self)
-            actions += economy.assign_idle_drones_to_minerals(self)
-            actions += economy.assign_drones_to_extractors(self)
-
-            # Scouting
-            scout = self.units.find_by_tag(self.active_scout_tag)
-            if not scout:
-                if self.units(UnitTypeId.ZERGLING).ready.exists:
-                    scout = self.units(UnitTypeId.ZERGLING).ready.first
-                    self.active_scout_tag = scout.tag
-                    self.logger.log("Assigned a new zergling scout " + str(scout.tag))
-                elif self.units(UnitTypeId.ROACHWARREN).exists and self.units(UnitTypeId.DRONE).ready.exists:
-                    scout = self.units(UnitTypeId.DRONE).ready.random
-                    self.active_scout_tag = scout.tag
-                    self.logger.log("Assigned a new drone scout " + str(scout.tag))
-            if scout:
-                if scout.is_idle:
-                    if self.opponent.unverified_hq_locations:
-                        targets = self.opponent.unverified_hq_locations
-                    else:
-                        targets = self.expansions_sorted
-                    for location in targets:
-                        actions.append(scout.move(location, queue=True))
-                else:
-                    if not self.hq_scout_found_front_door:
-                        for ramp in self._game_info.map_ramps:
-                            if scout.distance_to(ramp.top_center) < 5:
-                                self.hq_scout_found_front_door = True
-                                self.hq_front_door = ramp.top_center
-                                self.logger.log("Scout verified front door")
-
-            actions += self.army.base_defend()
+            actions += economy.get_drone_actions(self)
 
         await self.do_actions(actions)
 

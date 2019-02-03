@@ -1,8 +1,8 @@
-import time
 import random
 import statistics
-from sc2.ids.unit_typeid import UnitTypeId
+import time
 from sc2.helpers import ControlGroup
+from sc2.ids.unit_typeid import UnitTypeId
 from bot.util import util
 
 MAX_BASE_DOOR_RANGE = 30
@@ -19,12 +19,15 @@ class ArmyManager:
         self.logger = bot.logger
         self.opponent = bot.opponent
 
+        self.overlords = None
+        self.active_scout_tag = None  # Legacy
         self.all_combat_units = None
         self.reserve = ControlGroup([])
         self.scouts = ControlGroup([])
 
     def refresh(self):
         self.all_combat_units = self.bot.units(UnitTypeId.ZERGLING).ready | self.bot.units(UnitTypeId.ROACH).ready | self.bot.units(UnitTypeId.HYDRALISK).ready | self.bot.units(UnitTypeId.MUTALISK).ready
+        self.overlords = self.bot.units(UnitTypeId.OVERLORD)
         """
         ControlGroup is actually just a set of unit tags. When units whose tag is added to a CG die, their tags remains in the CG. This is probably not
         a problem, but we could also cleanup the CGs by cycling tags into units and then back to tags. Not sure if worth it performance-wise.
@@ -65,7 +68,6 @@ class ArmyManager:
             self.logger.warn("This base seems to several ramps, let's wait for scout to determine front door")
             return bot.start_location.towards(bot.game_info.map_center, 5)
 
-
     def enemy_is_building_on_our_side_of_the_map(self):
         bot = self.bot
         if bot.known_enemy_structures:
@@ -74,7 +76,6 @@ class ArmyManager:
                 return True
         return False
 
-
     def _unit_dispersion(self, units):
         if units:
             center = units.center
@@ -82,21 +83,20 @@ class ArmyManager:
         else:
             return 0
 
-
     # Attack to enemy base
-    def get_army_actions(self, timer, enemy_structures, enemy_start_locations, all_units, game_time, supply_used):
+    def get_army_actions(self):
         bot = self.bot
         actions = []
         units = self.all_combat_units  # TEMP
-        if units and timer.rings:
+        if units:
             bot.debugger.world_text("center", units.center)
-            strength = util.get_units_strength(bot, all_units) # TODO all_units or just idle?
-            enough = (ARMY_SIZE_BASE_LEVEL + ((game_time / 60) * ARMY_SIZE_TIME_MULTIPLIER))
+            strength = util.get_units_strength(bot, self.all_combat_units) # TODO all_units or just idle?
+            enough = (ARMY_SIZE_BASE_LEVEL + ((bot.time / 60) * ARMY_SIZE_TIME_MULTIPLIER))
             if self.enemy_is_building_on_our_side_of_the_map():
                 self.logger.warn("Enemy is building on our side of the map!")
                 enough = ARMY_SIZE_BASE_LEVEL
             towards = None
-            if (strength >= enough or supply_used > ARMY_SIZE_MAX):
+            if (strength >= enough or bot.supply_used > ARMY_SIZE_MAX):
                 dispersion = self._unit_dispersion(units)
 
                 if dispersion < ARMY_DISPERSION_MAX: # Attack!
@@ -125,23 +125,51 @@ class ArmyManager:
                 actions.append(unit.attack(bot.army_attack_point))
         return actions
 
-
-    # Scout home base with overlords
-    def patrol_with_overlords(self, overlords, front_door, start_location, enemy_start_locations):
+    def legacy_scouting(self):
+        bot = self.bot
         actions = []
-        for overlord in overlords.idle:
-            if len(overlords) == 1:
-                for enemy_loc in enemy_start_locations:
-                    actions.append(overlord.move(enemy_loc, queue=True))
-                actions.append(overlord.move(start_location, queue=True))
-                return actions
-            elif len(overlords) < 4:
-                patrol = front_door.random_on_distance(random.randrange(3, 6))
+        scout = bot.units.find_by_tag(self.active_scout_tag)
+        if not scout:
+            if bot.units(UnitTypeId.ZERGLING).ready.exists:
+                scout = bot.units(UnitTypeId.ZERGLING).ready.first
+                self.active_scout_tag = scout.tag
+                self.logger.log("Assigned a new zergling scout " + str(scout.tag))
+            elif bot.units(UnitTypeId.ROACHWARREN).exists and bot.units(UnitTypeId.DRONE).ready.exists:
+                scout = bot.units(UnitTypeId.DRONE).ready.random
+                self.active_scout_tag = scout.tag
+                self.logger.log("Assigned a new drone scout " + str(scout.tag))
+        if scout:
+            if scout.is_idle:
+                if bot.opponent.unverified_hq_locations:
+                    targets = bot.opponent.unverified_hq_locations
+                else:
+                    targets = bot.expansions_sorted
+                for location in targets:
+                    actions.append(scout.move(location, queue=True))
             else:
-                patrol = start_location.random_on_distance(30)
-            actions.append(overlord.move(patrol))
+                if not bot.hq_scout_found_front_door:
+                    for ramp in bot._game_info.map_ramps:
+                        if scout.distance_to(ramp.top_center) < 5:
+                            bot.hq_scout_found_front_door = True
+                            bot.hq_front_door = ramp.top_center
+                            self.logger.log("Scout verified front door")
         return actions
 
+    # Scout home base with overlords
+    def patrol_with_overlords(self):
+        actions = []
+        for overlord in self.overlords.idle:
+            if len(self.overlords) == 1:
+                for enemy_loc in self.bot.enemy_start_locations:
+                    actions.append(overlord.move(enemy_loc, queue=True))
+                actions.append(overlord.move(self.bot.start_location, queue=True))
+                return actions
+            elif len(self.overlords) < 4:
+                patrol = self.bot.hq_front_door.random_on_distance(random.randrange(3, 6))
+            else:
+                patrol = self.bot.start_location.random_on_distance(30)
+            actions.append(overlord.move(patrol))
+        return actions
 
     def is_worker_rush(self, town, enemies_approaching):
         enemies = enemies_approaching.closer_than(6, town)
@@ -149,7 +177,6 @@ class ArmyManager:
         if worker_enemies.amount > 1 and (worker_enemies.amount / enemies.amount) >= 0.8:
             return True
         return False
-
 
     # Base defend
     def base_defend(self):
@@ -174,5 +201,4 @@ class ArmyManager:
 
                 if len(enemies) == 1:
                     bot.logger.debug("Enemy is probably scouting our base")
-
         return actions

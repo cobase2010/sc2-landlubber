@@ -1,5 +1,5 @@
-from bot.economy import economy
 from sc2.ids.unit_typeid import UnitTypeId
+from bot.economy import economy
 
 
 class Builder:
@@ -71,11 +71,11 @@ class Builder:
 
 
     # Training units
-    def train_units(self, larvae):
+    def train_units(self):
         bot = self.bot
         actions = []
         for townhall in bot.townhalls:
-            town_larvae = larvae.closer_than(5, townhall)
+            town_larvae = bot.units(UnitTypeId.LARVA).closer_than(5, townhall)
             if town_larvae.exists:
                 larva = town_larvae.random
                 if self._should_train_overlord():
