@@ -57,11 +57,13 @@ class MyBot(sc2.BotAI):
         budget = self.time_budget_available  # pylint: disable=no-member
         if budget and budget < 0.3:
             self.logger.error(f"Skipping step to avoid post-cooldown vegetable bug, budget {budget:.3f}")
+            self.debugger.step_durations.append(time.time() - step_start)
             # return
             raise Exception
         else:
             await self.main_loop()
             self.debugger.warn_for_step_duration(step_start)
+            self.debugger.step_durations.append(time.time() - step_start)
             # try:
             # except Exception as e:
             #     print("ONLY SUCKERS CRASH!", e)
@@ -99,6 +101,7 @@ class MyBot(sc2.BotAI):
 
         if self.match_status_timer.rings:
             self.debugger.print_score()
+            self.debugger.print_step_stats()
         if self.warn_timer.rings:
             self.debugger.warn_unoptimal_play()
         self.debugger.world_text("door", self.hq_front_door)

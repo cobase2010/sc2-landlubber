@@ -9,12 +9,21 @@ class DebugPrinter:
         self.bot = bot
         self.logger = bot.logger
         self.match_start_time = time.time()
+        self.step_durations = []
 
     def world_text(self, text, pos):
         if pos:
             self.bot._client.debug_text_world(text, Point3((pos.position.x, pos.position.y, 10)), None, 14)
         else:
             self.logger.error("Received None position to draw text")
+
+    def print_step_stats(self):
+        self.logger.log("Step durations lately min={:.3f} avg={:.3f} max={:.3f}. Total steps recorded {}".format(
+            min(self.step_durations[-500:]),
+            sum(self.step_durations[-500:]) / len(self.step_durations[-500:]),
+            max(self.step_durations[-500:]),
+            len(self.step_durations)
+        ))
 
     # def print_running_speed(self):
     #     iteration = self.bot.iteration
