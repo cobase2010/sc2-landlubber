@@ -46,6 +46,7 @@ class MyBot(sc2.BotAI):
         self.hq_front_door = self.army.guess_front_door()
         self.army_attack_point = self.hq_front_door
         self.opponent.deferred_init()
+        self.army.deferred_init()
         self.logger.log("First step took {:.2f}s".format(time.time() - start))
 
     def on_end(self, result):

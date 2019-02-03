@@ -19,10 +19,16 @@ class ArmyManager:
         self.logger = bot.logger
         self.opponent = bot.opponent
 
+        self.first_overlord_tag = None
+        self.first_overlord_ordered = False
+
         self.has_verified_front_door = False
         self.all_combat_units = None
         self.reserve = ControlGroup([])
         self.harassing_base_scouts = ControlGroup([])
+
+    def deferred_init(self):
+        self.first_overlord_tag = self.bot.units(UnitTypeId.OVERLORD).first.tag
 
     def refresh(self):
         self.all_combat_units = self.bot.units(UnitTypeId.ZERGLING).ready | self.bot.units(UnitTypeId.ROACH).ready | self.bot.units(UnitTypeId.HYDRALISK).ready | self.bot.units(UnitTypeId.MUTALISK).ready
@@ -161,16 +167,28 @@ class ArmyManager:
     def patrol_with_overlords(self):
         actions = []
         overlords = self.bot.units(UnitTypeId.OVERLORD)
-        for overlord in overlords.idle:
-            if len(overlords) == 1:
-                for enemy_loc in self.bot.enemy_start_locations:
-                    actions.append(overlord.move(enemy_loc, queue=True))
-                actions.append(overlord.move(self.bot.start_location, queue=True))
-                return actions
-            elif len(overlords) < 4:
-                patrol = self.bot.hq_front_door.random_on_distance(random.randrange(3, 6))
+
+        # First overlord will scout enemy natural
+        firstborn = overlords.find_by_tag(self.first_overlord_tag)
+        if firstborn and not self.first_overlord_ordered:
+            if self.opponent.known_natural:
+                safe = util.away_more(self.opponent.known_natural, self.opponent.known_hq_location, 10)
+                gatish = self.opponent.known_natural.towards(self.opponent.known_hq_location, 8)
+                actions.append(firstborn.move(gatish))
+                actions.append(firstborn.move(safe, queue=True))
+                self.logger.log(f"Ordered firstborn overlord to scout gatish {gatish} and then safepoint {safe}")
             else:
-                patrol = self.bot.start_location.random_on_distance(30)
+                for enemy_loc in self.bot.enemy_start_locations:
+                    actions.append(firstborn.move(enemy_loc, queue=True))
+                actions.append(firstborn.move(self.bot.start_location, queue=True))
+            self.first_overlord_ordered = True
+
+        # Others will patrol around hq
+        if len(overlords) < 4:
+            patrol = self.bot.hq_front_door.random_on_distance(random.randrange(3, 6))
+        else:
+            patrol = self.bot.start_location.random_on_distance(30)
+        for overlord in overlords.idle.tags_not_in([self.first_overlord_tag]):
             actions.append(overlord.move(patrol))
         return actions
 
