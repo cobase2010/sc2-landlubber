@@ -28,8 +28,8 @@ def main():
             Computer(Race.Random, Difficulty.VeryHard)
         ],
         realtime=False,
-        step_time_limit=0.5, # We use locally much stricter limit than in the competition
-        game_time_limit=(60*20),
+        step_time_limit=0.5,      # We use locally much stricter limit than in the competition
+        game_time_limit=(60*60),  # Challenge has 60min gametime limit
         save_replay_as="latest.SC2Replay"
     )
 
