@@ -60,18 +60,21 @@ class Opponent:
                 self.known_hq_location = None
                 self.logger.log(f"Cleared enemy HQ")
 
-    def get_next_potential_base(self):
-        raise NotImplementedError
-
-    def get_next_potential_base_closest_to(self, source):
-        if self.structures:
-            return self.structures.closest_to(source).position
-        elif self.known_hq_location:
+    def get_next_scoutable_location(self, source_location=None):
+        if source_location is None:
+            source_location = self.bot.start_location
+        if self.known_hq_location:
             return self.known_hq_location
         elif self.next_potential_location:
             return self.next_potential_location
         elif self.unverified_hq_locations:
-            return self.unverified_hq_locations.closest_to(source).position
+            return self.unverified_hq_locations.closest_to(source_location).position
         else:
             self.logger.error("Our army has no idea where to go")
             return None
+
+
+    def get_next_potential_building_closest_to(self, source):
+        if self.structures:
+            return self.structures.closest_to(source).position
+        return self.get_next_scoutable_location(source)

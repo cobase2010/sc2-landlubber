@@ -37,9 +37,7 @@ class MyBot(sc2.BotAI):
         self.first_step = True
         self.hq_loss_handled = False
         self.hq_front_door = None
-        self.hq_scout_found_front_door = False
         self.army_attack_point = None
-        self.spawn_rally = None
 
     # Deferred actions after game state is available
     def on_first_step(self):
@@ -48,7 +46,6 @@ class MyBot(sc2.BotAI):
         self.expansions_sorted = economy.get_expansion_order(self.logger, self.expansion_locations, self.start_location)
         self.hq_front_door = self.army.guess_front_door()
         self.army_attack_point = self.hq_front_door
-        self.spawn_rally = self.hq_front_door
         self.opponent.deferred_init()
         self.logger.log("First step took {:.2f}s".format(time.time() - start))
 
@@ -87,7 +84,7 @@ class MyBot(sc2.BotAI):
         if self.army_timer.rings:
             actions += self.army.get_army_actions()
             actions += self.army.patrol_with_overlords()
-            actions += self.army.legacy_scouting()
+            actions += self.army.scout_and_harass()
             actions += self.army.base_defend()
 
         if self.build_timer.rings:

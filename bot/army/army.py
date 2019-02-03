@@ -19,15 +19,13 @@ class ArmyManager:
         self.logger = bot.logger
         self.opponent = bot.opponent
 
-        self.overlords = None
-        self.active_scout_tag = None  # Legacy
+        self.has_verified_front_door = False
         self.all_combat_units = None
         self.reserve = ControlGroup([])
-        self.scouts = ControlGroup([])
+        self.harassing_base_scouts = ControlGroup([])
 
     def refresh(self):
         self.all_combat_units = self.bot.units(UnitTypeId.ZERGLING).ready | self.bot.units(UnitTypeId.ROACH).ready | self.bot.units(UnitTypeId.HYDRALISK).ready | self.bot.units(UnitTypeId.MUTALISK).ready
-        self.overlords = self.bot.units(UnitTypeId.OVERLORD)
         """
         ControlGroup is actually just a set of unit tags. When units whose tag is added to a CG die, their tags remains in the CG. This is probably not
         a problem, but we could also cleanup the CGs by cycling tags into units and then back to tags. Not sure if worth it performance-wise.
@@ -35,10 +33,22 @@ class ArmyManager:
         2) alive = self.reserve.select_units(self.all_combat_units)
         """
 
-        unassigned = self.all_combat_units.tags_not_in(self.reserve | self.scouts)
+        # Add unassigned units to reserve
+        unassigned = self.all_combat_units.tags_not_in(self.reserve | self.harassing_base_scouts)
         if unassigned:
             self.reserve.add_units(unassigned)
-        
+
+        # Assign new ling scout from reserve
+        # TODO we should also send drones elif bot.units(UnitTypeId.ROACHWARREN).exists and bot.units(UnitTypeId.DRONE).ready.exists:
+        scouts = self.harassing_base_scouts.select_units(self.bot.units)
+        if not scouts:
+            lings_in_reserve = self.reserve.select_units(self.all_combat_units(UnitTypeId.ZERGLING))
+            if lings_in_reserve:
+                ling = lings_in_reserve.first
+                self.reserve.remove_unit(ling)
+                self.harassing_base_scouts.add_unit(ling)
+                print(f"Assigned new ling scout: {ling}")
+
     async def kamikaze(self):
         bot = self.bot
         if not bot.hq_loss_handled:
@@ -101,7 +111,7 @@ class ArmyManager:
 
                 if dispersion < ARMY_DISPERSION_MAX: # Attack!
                     self.logger.debug(f"Tight army advancing ({dispersion:.0f})")
-                    towards = bot.opponent.get_next_potential_base_closest_to(bot.army_attack_point)
+                    towards = bot.opponent.get_next_potential_building_closest_to(bot.army_attack_point)
                     if towards is None:
                         self.logger.error("Don't know where to go!")
                         return []  # FIXME This prevents a crash on win, but we should start scouting for enemy
@@ -125,46 +135,39 @@ class ArmyManager:
                 actions.append(unit.attack(bot.army_attack_point))
         return actions
 
-    def legacy_scouting(self):
-        bot = self.bot
+    def scout_and_harass(self):
         actions = []
-        scout = bot.units.find_by_tag(self.active_scout_tag)
-        if not scout:
-            if bot.units(UnitTypeId.ZERGLING).ready.exists:
-                scout = bot.units(UnitTypeId.ZERGLING).ready.first
-                self.active_scout_tag = scout.tag
-                self.logger.log("Assigned a new zergling scout " + str(scout.tag))
-            elif bot.units(UnitTypeId.ROACHWARREN).exists and bot.units(UnitTypeId.DRONE).ready.exists:
-                scout = bot.units(UnitTypeId.DRONE).ready.random
-                self.active_scout_tag = scout.tag
-                self.logger.log("Assigned a new drone scout " + str(scout.tag))
-        if scout:
-            if scout.is_idle:
-                if bot.opponent.unverified_hq_locations:
-                    targets = bot.opponent.unverified_hq_locations
-                else:
-                    targets = bot.expansions_sorted
-                for location in targets:
-                    actions.append(scout.move(location, queue=True))
-            else:
-                if not bot.hq_scout_found_front_door:
-                    for ramp in bot._game_info.map_ramps:
+        scouts = self.harassing_base_scouts.select_units(self.bot.units)
+        if scouts.idle:
+            location = self.opponent.get_next_scoutable_location()
+            self.logger.log(f"Ordering {len(scouts)} scouts to go to {location}")
+            for scout in scouts.idle:
+                actions.append(scout.move(location))
+        else:
+            if not self.has_verified_front_door:
+                for ramp in self.bot._game_info.map_ramps:
+                    for scout in scouts:
                         if scout.distance_to(ramp.top_center) < 5:
-                            bot.hq_scout_found_front_door = True
-                            bot.hq_front_door = ramp.top_center
+                            self.has_verified_front_door = True
+                            self.bot.hq_front_door = ramp.top_center
                             self.logger.log("Scout verified front door")
         return actions
+        # TODO expansion scouting
+        # targets = bot.expansions_sorted
+        # for location in targets:
+        #     actions.append(scout.move(location, queue=True))
 
     # Scout home base with overlords
     def patrol_with_overlords(self):
         actions = []
-        for overlord in self.overlords.idle:
-            if len(self.overlords) == 1:
+        overlords = self.bot.units(UnitTypeId.OVERLORD)
+        for overlord in overlords.idle:
+            if len(overlords) == 1:
                 for enemy_loc in self.bot.enemy_start_locations:
                     actions.append(overlord.move(enemy_loc, queue=True))
                 actions.append(overlord.move(self.bot.start_location, queue=True))
                 return actions
-            elif len(self.overlords) < 4:
+            elif len(overlords) < 4:
                 patrol = self.bot.hq_front_door.random_on_distance(random.randrange(3, 6))
             else:
                 patrol = self.bot.start_location.random_on_distance(30)
