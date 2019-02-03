@@ -172,11 +172,9 @@ class ArmyManager:
         firstborn = overlords.find_by_tag(self.first_overlord_tag)
         if firstborn and not self.first_overlord_ordered:
             if self.opponent.known_natural:
-                safe = util.away_more(self.opponent.known_natural, self.opponent.known_hq_location, 10)
-                gatish = self.opponent.known_natural.towards(self.opponent.known_hq_location, 8)
-                actions.append(firstborn.move(gatish))
-                actions.append(firstborn.move(safe, queue=True))
-                self.logger.log(f"Ordered firstborn overlord to scout gatish {gatish} and then safepoint {safe}")
+                safepoint_near_natural = util.away_more(self.opponent.known_natural, self.opponent.known_hq_location, 10)
+                near_enemy_front_door = self.opponent.known_natural.towards(self.opponent.known_hq_location, 6)
+                actions += [firstborn.move(near_enemy_front_door), firstborn.move(safepoint_near_natural, queue=True)]
             else:
                 for enemy_loc in self.bot.enemy_start_locations:
                     actions.append(firstborn.move(enemy_loc, queue=True))
