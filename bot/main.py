@@ -9,10 +9,9 @@ from sc2.ids.unit_typeid import UnitTypeId
 from sc2.player import Bot, Computer
 from bot.army.army import ArmyManager
 from bot.army.opponent import Opponent
-from bot.debug import debug
-from bot.debug.debug import DebugPrinter
 from bot.economy import economy, tech
 from bot.economy.build import Builder
+from bot.util.debug import DebugPrinter
 from bot.util.log import TerminalLogger
 from bot.util.timer import Timer
 
