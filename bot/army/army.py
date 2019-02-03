@@ -66,7 +66,7 @@ class ArmyManager:
             return doors[0].top_center
         else:
             self.logger.warn("This base seems to several ramps, let's wait for scout to determine front door")
-            return bot.start_location.towards(bot.game_info.map_center, 5)
+            return bot.start_location.towards(bot.game_info.map_center, 10)
 
     def enemy_is_building_on_our_side_of_the_map(self):
         bot = self.bot
