@@ -18,6 +18,6 @@ def get_units_strength(bot, units):
     return strength
 
 
-def away_more(this: Pointlike, from_this: Pointlike, this_much_more: float):
+def away(this: Pointlike, from_this: Pointlike, this_much_more: float):
     distance_total = from_this.distance_to(this) + this_much_more
     return from_this.towards(this, distance_total)

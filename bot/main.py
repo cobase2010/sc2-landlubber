@@ -24,6 +24,7 @@ class MyBot(sc2.BotAI):
         self.builder = Builder(self)
         self.army = ArmyManager(self)
         
+        self.drone_eco_optimization_timer = Timer(self, 0.2)
         self.army_timer = Timer(self, 0.1)
         self.build_timer = Timer(self, 0.5)
         self.match_status_timer = Timer(self, 60)
@@ -83,6 +84,11 @@ class MyBot(sc2.BotAI):
             return
 
         actions = []
+
+        if self.drone_eco_optimization_timer.rings:
+            await economy.reassign_overideal_drones(self)  # TODO combine to drone actions below
+            actions += economy.get_drone_actions(self)
+
         if self.army_timer.rings:
             actions += self.army.get_army_actions()
             actions += self.army.patrol_with_overlords()
@@ -93,10 +99,8 @@ class MyBot(sc2.BotAI):
             actions += economy.set_hatchery_rally_points(self)
             actions += self.builder.train_units()
             await self.builder.begin_projects()
-            await economy.reassign_overideal_drones(self)  # TODO combine to drone actions below
             actions += tech.upgrade_tech(self)
             actions += await economy.produce_larvae(self)
-            actions += economy.get_drone_actions(self)
 
         await self.do_actions(actions)
 

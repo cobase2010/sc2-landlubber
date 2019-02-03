@@ -44,8 +44,7 @@ class ArmyManager:
         if unassigned:
             self.reserve.add_units(unassigned)
 
-        # Assign new ling scout from reserve
-        # TODO we should also send drones elif bot.units(UnitTypeId.ROACHWARREN).exists and bot.units(UnitTypeId.DRONE).ready.exists:
+        # Assign new scout from reserve or from drones
         scouts = self.harassing_base_scouts.select_units(self.bot.units)
         if not scouts:
             lings_in_reserve = self.reserve.select_units(self.all_combat_units(UnitTypeId.ZERGLING))
@@ -54,6 +53,12 @@ class ArmyManager:
                 self.reserve.remove_unit(ling)
                 self.harassing_base_scouts.add_unit(ling)
                 print(f"Assigned new ling scout: {ling}")
+            else:
+                drones_available = self.bot.units(UnitTypeId.DRONE)  # TODO filter drones that have a special job
+                if drones_available and not self.bot.units(UnitTypeId.SPAWNINGPOOL).exists:
+                    drone = drones_available.first
+                    self.harassing_base_scouts.add_unit(drone)
+                    print(f"Assigned new drone scout: {drone}")
 
     async def kamikaze(self):
         bot = self.bot
@@ -144,11 +149,24 @@ class ArmyManager:
     def scout_and_harass(self):
         actions = []
         scouts = self.harassing_base_scouts.select_units(self.bot.units)
-        if scouts.idle:
+        if scouts:
             location = self.opponent.get_next_scoutable_location()
-            self.logger.log(f"Ordering {len(scouts)} scouts to go to {location}")
-            for scout in scouts.idle:
-                actions.append(scout.move(location))
+            for scout in scouts:
+                # Harass workers
+                if self.opponent.known_hq_location and scout.distance_to(self.opponent.known_hq_location) < 3:
+                    worker_enemies = self.opponent.units(UnitTypeId.DRONE) | self.opponent.units(UnitTypeId.PROBE) | self.opponent.units(UnitTypeId.SCV)
+                    victim = worker_enemies.closest_to(scout.position)
+                    actions.append(scout.attack(victim))
+                else:
+                    actions.append(scout.move(location))
+                # Kite
+                if self.opponent.units:
+                    enemies_closeby = self.opponent.units.filter(lambda unit: unit.can_attack_ground).closer_than(2, scout)
+                    if enemies_closeby and scout.health_percentage < 0.4:
+                        closest_enemy = enemies_closeby.closest_to(scout)
+                        actions.append(scout.move(util.away(scout.position, closest_enemy.position, 4)))
+
+        # Home base door verification
         else:
             if not self.has_verified_front_door:
                 for ramp in self.bot._game_info.map_ramps:
@@ -157,6 +175,7 @@ class ArmyManager:
                             self.has_verified_front_door = True
                             self.bot.hq_front_door = ramp.top_center
                             self.logger.log("Scout verified front door")
+
         return actions
         # TODO expansion scouting
         # targets = bot.expansions_sorted
@@ -172,7 +191,7 @@ class ArmyManager:
         firstborn = overlords.find_by_tag(self.first_overlord_tag)
         if firstborn and not self.first_overlord_ordered:
             if self.opponent.known_natural:
-                safepoint_near_natural = util.away_more(self.opponent.known_natural, self.opponent.known_hq_location, 10)
+                safepoint_near_natural = util.away(self.opponent.known_natural, self.opponent.known_hq_location, 10)
                 near_enemy_front_door = self.opponent.known_natural.towards(self.opponent.known_hq_location, 6)
                 actions += [firstborn.move(near_enemy_front_door), firstborn.move(safepoint_near_natural, queue=True)]
             else:
