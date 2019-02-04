@@ -106,14 +106,6 @@ class ArmyManager:
             self.logger.warn("This base seems to several ramps, let's wait for scout to determine front door")
             return bot.start_location.towards(bot.game_info.map_center, 10)
 
-    def enemy_is_building_on_our_side_of_the_map(self):
-        bot = self.bot
-        if bot.known_enemy_structures:
-            range = bot.start_location.distance_to(bot._game_info.map_center)
-            if bot.start_location.distance_to_closest(bot.known_enemy_structures) < range:
-                return True
-        return False
-
     def _unit_dispersion(self, units):
         if units:
             center = units.center
@@ -132,8 +124,7 @@ class ArmyManager:
             bot.debugger.world_text("center", units.center)
             strength = util.get_units_strength(bot, units)
             enough = (ARMY_SIZE_BASE_LEVEL + ((bot.time / 60) * ARMY_SIZE_TIME_MULTIPLIER))
-            if self.enemy_is_building_on_our_side_of_the_map():
-                self.logger.warn("Enemy is building on our side of the map!")
+            if self.opponent.proxying:
                 enough = ARMY_SIZE_BASE_LEVEL
             towards = None
             if (strength >= enough or bot.supply_used > ARMY_SIZE_MAX):
@@ -228,15 +219,20 @@ class ArmyManager:
 
         # Second overlord will scout proxy rax
         early_warner = overlords.find_by_tag(self.early_warning_overlord_tag)
-        if early_warner and not self.early_warning_overlord_ordered:
-            hq = self.bot.start_location
-            center = self.bot.game_info.map_center
-            dist_between_hq_and_center = hq.distance_to(center)
-            halfway = hq.towards(center, dist_between_hq_and_center * 0.7)
-            actions.append(early_warner.move(halfway, queue=False))
-            actions.append(early_warner.patrol(halfway.random_on_distance(15), queue=True))
-            actions.append(early_warner.patrol(halfway.random_on_distance(15), queue=True))
-            self.early_warning_overlord_ordered = True
+        if early_warner:
+            if not self.opponent.proxying:
+                if not self.early_warning_overlord_ordered:
+                    hq = self.bot.start_location
+                    center = self.bot.game_info.map_center
+                    dist_between_hq_and_center = hq.distance_to(center)
+                    halfway = hq.towards(center, dist_between_hq_and_center * 0.7)
+                    actions.append(early_warner.move(halfway, queue=False))
+                    actions.append(early_warner.patrol(halfway.random_on_distance(5), queue=True))
+                    actions.append(early_warner.patrol(halfway.random_on_distance(5), queue=True))
+                    self.early_warning_overlord_ordered = True
+            else:
+                self.logger.warn("Enemy is proxy raxing, RTB with early warner!")
+                actions.append(early_warner.move(self.bot.start_location, queue=False))
 
         # Others will patrol around hq
         if len(overlords) < 4:

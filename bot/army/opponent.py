@@ -14,6 +14,7 @@ class Opponent:
         self.army_strength = 0
         self.units = None
         self.structures = None
+        self.proxying = False
 
         if bot.enemy_race != Race.Random:
             self._set_race(bot.enemy_race)
@@ -44,6 +45,7 @@ class Opponent:
 
         if self.bot.known_enemy_structures:
             self.structures = self.bot.known_enemy_structures
+            self.check_proxy()
 
         if self.unverified_hq_locations:
             for i, base in enumerate(self.unverified_hq_locations):
@@ -60,6 +62,16 @@ class Opponent:
                 self.known_hq_location = None
                 self.logger.log(f"Cleared enemy HQ")
 
+    def check_proxy(self):
+        hq = self.bot.start_location
+        too_close_distance = hq.distance_to(self.bot._game_info.map_center)
+        if self.structures:
+            if hq.distance_to_closest(self.structures) < too_close_distance:
+                self.logger.warn("Enemy proxy!")
+                self.proxying = True
+        else:
+            self.proxying = False
+
     def get_next_scoutable_location(self, source_location=None):
         if source_location is None:
             source_location = self.bot.start_location
@@ -72,7 +84,6 @@ class Opponent:
         else:
             self.logger.error("Our army has no idea where to go")
             return None
-
 
     def get_next_potential_building_closest_to(self, source):
         if self.structures:
