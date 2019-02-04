@@ -50,7 +50,7 @@ class Builder:
         random_townhall = bot.townhalls.first
         strategy_penalty_multiplier = 1
         if self.opponent.strategy in [Strategy.PROXY]:
-            strategy_penalty_multiplier = 1.8
+            strategy_penalty_multiplier = 2
 
         if economy.should_build_hatchery(bot):
             self.logger.log("Building hatchery")
@@ -65,13 +65,13 @@ class Builder:
         if bot.units(UnitTypeId.SPAWNINGPOOL).ready.exists:
             await self._build_one(UnitTypeId.ROACHWARREN)
 
-        if bot.units(UnitTypeId.ROACHWARREN).ready.exists and self.army.strength >= 600 * strategy_penalty_multiplier:
+        if bot.units(UnitTypeId.ROACHWARREN).ready.exists and self.army.strength >= 500 * strategy_penalty_multiplier:
             if (not bot.units(UnitTypeId.LAIR).exists or bot.already_pending(UnitTypeId.LAIR)) and random_townhall.noqueue:
                 if bot.can_afford(UnitTypeId.LAIR):
                     self.logger.log("Building lair")
                     await bot.do_actions([random_townhall.build(UnitTypeId.LAIR)])
 
-            if bot.units(UnitTypeId.LAIR).ready.exists and len(bot.townhalls.ready) > 1 and self.army.strength >= 600 * strategy_penalty_multiplier:
+            if bot.units(UnitTypeId.LAIR).ready.exists and len(bot.townhalls.ready) > 1 and self.army.strength >= 500 * strategy_penalty_multiplier:
                 await self._build_one(UnitTypeId.EVOLUTIONCHAMBER)
                 await self._build_one(UnitTypeId.SPIRE)
 
