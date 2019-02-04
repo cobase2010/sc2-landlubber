@@ -26,6 +26,7 @@ class ArmyManager:
         self.all_combat_units = None
         self.reserve = ControlGroup([])
         self.harassing_base_scouts = ControlGroup([])
+        self.no_mans_expansions_scouts = ControlGroup([])
 
     def deferred_init(self):
         self.first_overlord_tag = self.bot.units(UnitTypeId.OVERLORD).first.tag
@@ -40,25 +41,29 @@ class ArmyManager:
         """
 
         # Add unassigned units to reserve
-        unassigned = self.all_combat_units.tags_not_in(self.reserve | self.harassing_base_scouts)
+        unassigned = self.all_combat_units.tags_not_in(self.reserve | self.harassing_base_scouts | self.no_mans_expansions_scouts)
         if unassigned:
             self.reserve.add_units(unassigned)
 
-        # Assign new scout from reserve or from drones
-        scouts = self.harassing_base_scouts.select_units(self.bot.units)
+        # Assign base and expansion scouts from reserve or drones
+        self._assign_scout_if_none(self.harassing_base_scouts)
+        if self.bot.time > 120:
+            self._assign_scout_if_none(self.no_mans_expansions_scouts)
+
+    # Assign new scout from reserve or from drones
+    def _assign_scout_if_none(self, group):
+        scouts = group.select_units(self.bot.units)
         if not scouts:
             lings_in_reserve = self.reserve.select_units(self.all_combat_units(UnitTypeId.ZERGLING))
             if lings_in_reserve:
                 ling = lings_in_reserve.first
                 self.reserve.remove_unit(ling)
-                self.harassing_base_scouts.add_unit(ling)
-                print(f"Assigned new ling scout: {ling}")
+                group.add_unit(ling)
             else:
                 drones_available = self.bot.units(UnitTypeId.DRONE)  # TODO filter drones that have a special job
-                if drones_available and not self.bot.units(UnitTypeId.SPAWNINGPOOL).exists:
+                if drones_available:
                     drone = drones_available.first
-                    self.harassing_base_scouts.add_unit(drone)
-                    print(f"Assigned new drone scout: {drone}")
+                    group.add_unit(drone)
 
     async def kamikaze(self):
         bot = self.bot
@@ -108,10 +113,12 @@ class ArmyManager:
     def get_army_actions(self):
         bot = self.bot
         actions = []
-        units = self.all_combat_units  # TEMP
+
+        # TODO FIXME This should not manipulate reserve but only attack group
+        units = self.reserve.select_units(bot.units)
         if units:
             bot.debugger.world_text("center", units.center)
-            strength = util.get_units_strength(bot, self.all_combat_units) # TODO all_units or just idle?
+            strength = util.get_units_strength(bot, units)
             enough = (ARMY_SIZE_BASE_LEVEL + ((bot.time / 60) * ARMY_SIZE_TIME_MULTIPLIER))
             if self.enemy_is_building_on_our_side_of_the_map():
                 self.logger.warn("Enemy is building on our side of the map!")
@@ -171,16 +178,25 @@ class ArmyManager:
             if not self.has_verified_front_door:
                 for ramp in self.bot._game_info.map_ramps:
                     for scout in scouts:
-                        if scout.distance_to(ramp.top_center) < 5:
+                        if scout.distance_to(ramp.top_center) < 7:
                             self.has_verified_front_door = True
                             self.bot.hq_front_door = ramp.top_center
                             self.logger.log("Scout verified front door")
-
         return actions
-        # TODO expansion scouting
-        # targets = bot.expansions_sorted
-        # for location in targets:
-        #     actions.append(scout.move(location, queue=True))
+
+    def scout_no_mans_expansions(self):
+        actions = []
+        scouts = self.no_mans_expansions_scouts.select_units(self.bot.units)
+        if scouts.idle:
+            exps = list(self.bot.expansion_locations)
+            exps.remove(self.opponent.known_hq_location)
+            exps.remove(self.opponent.known_natural)
+            for scout in scouts:
+                self.logger.log(f"Sending scout {scout} to no man's land")
+                actions.append(scout.move(self.bot.hq_front_door, queue=False))
+                for exp in exps:
+                    actions.append(scout.move(exp, queue=True))
+        return actions
 
     # Scout home base with overlords
     def patrol_with_overlords(self):

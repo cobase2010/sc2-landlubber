@@ -25,7 +25,7 @@ class MyBot(sc2.BotAI):
         self.army = ArmyManager(self)
         
         self.drone_eco_optimization_timer = Timer(self, 0.2)
-        self.army_timer = Timer(self, 0.1)
+        self.army_timer = Timer(self, 0.05)
         self.build_timer = Timer(self, 0.5)
         self.match_status_timer = Timer(self, 60)
         self.warn_timer = Timer(self, 3)
@@ -93,6 +93,7 @@ class MyBot(sc2.BotAI):
             actions += self.army.get_army_actions()
             actions += self.army.patrol_with_overlords()
             actions += self.army.scout_and_harass()
+            actions += self.army.scout_no_mans_expansions()
             actions += self.army.base_defend()
 
         if self.build_timer.rings:
@@ -110,4 +111,8 @@ class MyBot(sc2.BotAI):
         if self.warn_timer.rings:
             self.debugger.warn_unoptimal_play()
         self.debugger.world_text("door", self.hq_front_door)
+        scouts = self.army.no_mans_expansions_scouts.select_units(self.units)
+        if scouts:
+            for scout in scouts:
+                self.debugger.world_text("scout", scout.position)
         await self._client.send_debug()
