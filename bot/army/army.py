@@ -21,6 +21,8 @@ class ArmyManager:
 
         self.first_overlord_tag = None
         self.first_overlord_ordered = False
+        self.early_warning_overlord_tag = None
+        self.early_warning_overlord_ordered = False
 
         self.has_verified_front_door = False
         self.all_combat_units = None
@@ -44,6 +46,16 @@ class ArmyManager:
         unassigned = self.all_combat_units.tags_not_in(self.reserve | self.harassing_base_scouts | self.no_mans_expansions_scouts)
         if unassigned:
             self.reserve.add_units(unassigned)
+
+        # Early warning lookout against proxy rax
+        overlords = self.bot.units(UnitTypeId.OVERLORD)
+        early_warning = overlords.find_by_tag(self.early_warning_overlord_tag)
+        if not early_warning:
+            volunteers = overlords.ready.tags_not_in([self.first_overlord_tag])
+            if volunteers:
+                self.early_warning_overlord_tag = volunteers.first.tag
+                self.early_warning_overlord_ordered = False
+                self.logger.log("Found new volunteer to become early warning lookout")
 
         # Assign base and expansion scouts from reserve or drones
         self._assign_scout_if_none(self.harassing_base_scouts)
@@ -214,12 +226,24 @@ class ArmyManager:
                 actions.append(firstborn.move(self.bot.start_location, queue=True))
             self.first_overlord_ordered = True
 
+        # Second overlord will scout proxy rax
+        early_warner = overlords.find_by_tag(self.early_warning_overlord_tag)
+        if early_warner and not self.early_warning_overlord_ordered:
+            hq = self.bot.start_location
+            center = self.bot.game_info.map_center
+            dist_between_hq_and_center = hq.distance_to(center)
+            halfway = hq.towards(center, dist_between_hq_and_center * 0.7)
+            actions.append(early_warner.move(halfway, queue=False))
+            actions.append(early_warner.patrol(halfway.random_on_distance(15), queue=True))
+            actions.append(early_warner.patrol(halfway.random_on_distance(15), queue=True))
+            self.early_warning_overlord_ordered = True
+
         # Others will patrol around hq
         if len(overlords) < 4:
             patrol = self.bot.hq_front_door.random_on_distance(random.randrange(3, 6))
         else:
             patrol = self.bot.start_location.random_on_distance(30)
-        for overlord in overlords.idle.tags_not_in([self.first_overlord_tag]):
+        for overlord in overlords.idle.tags_not_in([self.first_overlord_tag, self.early_warning_overlord_tag]):
             actions.append(overlord.move(patrol))
         return actions
 
