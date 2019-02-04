@@ -4,6 +4,7 @@ import time
 from sc2.helpers import ControlGroup
 from sc2.ids.unit_typeid import UnitTypeId
 from bot.util import util
+from bot.opponent.strategy import Strategy
 
 MAX_BASE_DOOR_RANGE = 30
 ARMY_SIZE_BASE_LEVEL = 200
@@ -124,7 +125,7 @@ class ArmyManager:
             bot.debugger.world_text("center", units.center)
             strength = util.get_units_strength(bot, units)
             enough = (ARMY_SIZE_BASE_LEVEL + ((bot.time / 60) * ARMY_SIZE_TIME_MULTIPLIER))
-            if self.opponent.proxying:
+            if self.opponent.strategy == Strategy.PROXY:
                 enough = ARMY_SIZE_BASE_LEVEL
             towards = None
             if (strength >= enough or bot.supply_used > ARMY_SIZE_MAX):
@@ -221,7 +222,7 @@ class ArmyManager:
         # Second overlord will scout proxy rax
         early_warner = overlords.find_by_tag(self.early_warning_overlord_tag)
         if early_warner:
-            if not self.opponent.proxying:
+            if self.opponent.strategy != Strategy.PROXY:
                 if not self.early_warning_overlord_ordered:
                     hq = self.bot.start_location
                     center = self.bot.game_info.map_center

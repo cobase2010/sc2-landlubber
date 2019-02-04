@@ -1,4 +1,5 @@
 from sc2 import Race, Difficulty
+from bot.opponent.strategy import Strategy
 
 
 class Opponent:
@@ -14,7 +15,7 @@ class Opponent:
         self.army_strength = 0
         self.units = None
         self.structures = None
-        self.proxying = False
+        self.strategy = None
 
         if bot.enemy_race != Race.Random:
             self._set_race(bot.enemy_race)
@@ -68,9 +69,9 @@ class Opponent:
         if self.structures:
             if hq.distance_to_closest(self.structures) < too_close_distance:
                 self.logger.warn("Enemy proxy!")
-                self.proxying = True
-        else:
-            self.proxying = False
+                self.strategy = Strategy.PROXY
+        elif self.strategy == Strategy.PROXY:
+            self.strategy = Strategy.PROXY_ATTEMPTED
 
     def get_next_scoutable_location(self, source_location=None):
         if source_location is None:

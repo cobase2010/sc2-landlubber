@@ -3,6 +3,7 @@ import json
 from sc2 import run_game, maps, Race, Difficulty
 from sc2.player import Bot, Computer
 from bot import MyBot
+from examples.terran.proxy_rax import ProxyRaxBot
 
 def pick_map(all_maps=False):
     if all_maps:
@@ -25,7 +26,8 @@ def main():
         pick_map(),
         [
             Bot(race, MyBot()),
-            Computer(Race.Random, Difficulty.VeryHard)
+            Bot(Race["Terran"], ProxyRaxBot()),
+            # Computer(Race.Random, Difficulty.VeryHard)
         ],
         realtime=False,
         step_time_limit=0.5,      # We use locally much stricter limit than in the competition

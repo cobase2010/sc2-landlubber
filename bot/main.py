@@ -8,7 +8,7 @@ from sc2.ids.ability_id import AbilityId
 from sc2.ids.unit_typeid import UnitTypeId
 from sc2.player import Bot, Computer
 from bot.army.army import ArmyManager
-from bot.army.opponent import Opponent
+from bot.opponent.opponent import Opponent
 from bot.economy import economy, tech
 from bot.economy.build import Builder
 from bot.util.debug import DebugPrinter
