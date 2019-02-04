@@ -206,7 +206,7 @@ class ArmyManager:
             exps.remove(self.opponent.known_hq_location)
             exps.remove(self.opponent.known_natural)
             for scout in scouts:
-                self.logger.log(f"Sending scout {scout} to no man's land")
+                self.logger.debug(f"Sending scout {scout} to no man's land")
                 actions.append(scout.move(self.bot.hq_front_door, queue=False))
                 for exp in exps:
                     actions.append(scout.move(exp, queue=True))

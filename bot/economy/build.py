@@ -75,7 +75,6 @@ class Builder:
                 await self._build_one(UnitTypeId.EVOLUTIONCHAMBER)
                 await self._build_one(UnitTypeId.SPIRE)
 
-
     # Training units
     def train_units(self):
         bot = self.bot
@@ -92,11 +91,15 @@ class Builder:
                     actions.append(larva.train(UnitTypeId.DRONE))
                 else:
                     if bot.can_afford(UnitTypeId.MUTALISK) and bot.units(UnitTypeId.SPIRE).ready.exists:
-                        actions.append(larva.train(UnitTypeId.MUTALISK))
                         self.logger.debug("Training mutalisk")
-                    elif bot.units(UnitTypeId.ROACHWARREN).ready.exists and bot.can_afford(UnitTypeId.ROACH):
-                        actions.append(larva.train(UnitTypeId.ROACH))
-                        self.logger.debug("Training roach")
+                        actions.append(larva.train(UnitTypeId.MUTALISK))
+                    elif bot.units(UnitTypeId.ROACHWARREN).ready.exists:
+                        if bot.can_afford(UnitTypeId.ROACH):
+                            self.logger.debug("Training roach")
+                            actions.append(larva.train(UnitTypeId.ROACH))
+                        elif bot.minerals > 400 and bot.units(UnitTypeId.LARVA).amount > 5:
+                            self.logger.log("Training late ling because excessive minerals")
+                            actions.append(larva.train(UnitTypeId.ZERGLING))
                     elif bot.can_afford(UnitTypeId.ZERGLING) and bot.units(UnitTypeId.SPAWNINGPOOL).ready.exists:
                         self.logger.debug("Training ling")
                         actions.append(larva.train(UnitTypeId.ZERGLING))
