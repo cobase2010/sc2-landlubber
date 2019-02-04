@@ -40,7 +40,6 @@ class Builder:
             should = buffer <= required_buffer and bot.supply_cap < 200
             return should
 
-
     # Build tree
     async def begin_projects(self):
         bot = self.bot
@@ -59,13 +58,13 @@ class Builder:
         if bot.units(UnitTypeId.SPAWNINGPOOL).ready.exists:
             await self._build_one(UnitTypeId.ROACHWARREN)
 
-        if bot.units(UnitTypeId.ROACHWARREN).ready.exists:
+        if bot.units(UnitTypeId.ROACHWARREN).ready.exists and bot.units(UnitTypeId.ROACH).amount > 5:
             if (not bot.units(UnitTypeId.LAIR).exists or bot.already_pending(UnitTypeId.LAIR)) and random_townhall.noqueue:
                 if bot.can_afford(UnitTypeId.LAIR):
                     self.logger.log("Building lair")
                     await bot.do_actions([random_townhall.build(UnitTypeId.LAIR)])
 
-        if bot.units(UnitTypeId.LAIR).ready.exists and len(bot.townhalls.ready) > 1:
+        if bot.units(UnitTypeId.LAIR).ready.exists and len(bot.townhalls.ready) > 1 and bot.units(UnitTypeId.ROACH).amount > 5:
             await self._build_one(UnitTypeId.EVOLUTIONCHAMBER)
             await self._build_one(UnitTypeId.SPIRE)
 
