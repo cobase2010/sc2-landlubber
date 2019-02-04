@@ -127,7 +127,7 @@ class ArmyManager:
             strength = util.get_units_strength(bot, units)
             enough = (ARMY_SIZE_BASE_LEVEL + ((bot.time / 60) * ARMY_SIZE_TIME_MULTIPLIER))
             if self.opponent.strategy == Strategy.PROXY:
-                enough = ARMY_SIZE_BASE_LEVEL
+                enough = 50
             towards = None
             if (strength >= enough or bot.supply_used > ARMY_SIZE_MAX):
                 dispersion = self._unit_dispersion(units)

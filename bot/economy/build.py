@@ -65,8 +65,6 @@ class Builder:
         if bot.units(UnitTypeId.SPAWNINGPOOL).ready.exists:
             await self._build_one(UnitTypeId.ROACHWARREN)
 
-        print(self.army.strength)
-
         if bot.units(UnitTypeId.ROACHWARREN).ready.exists and self.army.strength >= 600 * strategy_penalty_multiplier:
             if (not bot.units(UnitTypeId.LAIR).exists or bot.already_pending(UnitTypeId.LAIR)) and random_townhall.noqueue:
                 if bot.can_afford(UnitTypeId.LAIR):
