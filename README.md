@@ -11,7 +11,7 @@ This bot plays [StarCraft 2](https://starcraft2.com/). Written for participation
 
 This bot wins:
 
-- sometimes against `Difficulty.VeryHard` (*"Elite"* in-game)
+- often against `Difficulty.VeryHard` (*"Elite"* in-game)
 - most of the time against `Difficulty.Harder` (*"Very Hard"* in-game)
 - all the time against `Difficulty.Hard` (*"Harder"* in-game)
 

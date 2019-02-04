@@ -79,7 +79,7 @@ class Opponent:
             self.logger.warn("Enemy uses proxy strategy!")
             self.strategy = Strategy.PROXY
         elif not self.is_too_close() and self.strategy == Strategy.PROXY:
-            self.logger.info("Enemy proxy beaten for now")
+            self.logger.log("Enemy proxy beaten for now")
             self.strategy = Strategy.PROXY_ATTEMPTED
 
     def get_next_scoutable_location(self, source_location=None):
