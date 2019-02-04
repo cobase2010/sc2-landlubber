@@ -209,8 +209,8 @@ class ArmyManager:
         firstborn = overlords.find_by_tag(self.first_overlord_tag)
         if firstborn and not self.first_overlord_ordered:
             if self.opponent.known_natural:
+                near_enemy_front_door = self.opponent.known_natural.towards(self.opponent.known_hq_location, 4)
                 safepoint_near_natural = util.away(self.opponent.known_natural, self.opponent.known_hq_location, 10)
-                near_enemy_front_door = self.opponent.known_natural.towards(self.opponent.known_hq_location, 6)
                 actions += [firstborn.move(near_enemy_front_door), firstborn.move(safepoint_near_natural, queue=True)]
             else:
                 for enemy_loc in self.bot.enemy_start_locations:
