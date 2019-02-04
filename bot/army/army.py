@@ -165,7 +165,7 @@ class ArmyManager:
                 # Harass workers
                 if self.opponent.known_hq_location and scout.distance_to(self.opponent.known_hq_location) < 3:
                     worker_enemies = self.opponent.units(UnitTypeId.DRONE) | self.opponent.units(UnitTypeId.PROBE) | self.opponent.units(UnitTypeId.SCV)
-                    if worker_enemies:
+                    if worker_enemies and not scout.is_attacking:
                         victim = worker_enemies.closest_to(scout.position)
                         actions.append(scout.attack(victim))
                 else:
