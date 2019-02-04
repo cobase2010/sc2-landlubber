@@ -26,8 +26,8 @@ def main():
         pick_map(),
         [
             Bot(race, MyBot()),
-            Bot(Race["Terran"], ProxyRaxBot()),
-            # Computer(Race.Random, Difficulty.VeryHard)
+            # Bot(Race["Terran"], ProxyRaxBot()),
+            Computer(Race.Random, Difficulty.VeryHard)
         ],
         realtime=False,
         step_time_limit=0.5,      # We use locally much stricter limit than in the competition

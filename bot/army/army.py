@@ -30,6 +30,7 @@ class ArmyManager:
         self.reserve = ControlGroup([])
         self.harassing_base_scouts = ControlGroup([])
         self.no_mans_expansions_scouts = ControlGroup([])
+        self.muta_flankers = ControlGroup([])
 
     def deferred_init(self):
         self.first_overlord_tag = self.bot.units(UnitTypeId.OVERLORD).first.tag
@@ -45,7 +46,7 @@ class ArmyManager:
         """
 
         # Add unassigned units to reserve
-        unassigned = self.all_combat_units.tags_not_in(self.reserve | self.harassing_base_scouts | self.no_mans_expansions_scouts)
+        unassigned = self.all_combat_units.tags_not_in(self.reserve | self.harassing_base_scouts | self.no_mans_expansions_scouts | self.muta_flankers)
         if unassigned:
             self.reserve.add_units(unassigned)
 
@@ -59,25 +60,22 @@ class ArmyManager:
                 self.early_warning_overlord_ordered = False
                 self.logger.log("Found new volunteer to become early warning lookout")
 
-        # Assign base and expansion scouts from reserve or drones
-        self._assign_scout_if_none(self.harassing_base_scouts)
+        self._reinforce_from_reserve_if_empty(self.muta_flankers, UnitTypeId.MUTALISK, 10)
+        self._reinforce_from_reserve_if_empty(self.harassing_base_scouts, UnitTypeId.ZERGLING, 1, True)
         if self.bot.time > 120:
-            self._assign_scout_if_none(self.no_mans_expansions_scouts)
+            self._reinforce_from_reserve_if_empty(self.no_mans_expansions_scouts, UnitTypeId.ZERGLING, 1, True)
 
-    # Assign new scout from reserve or from drones
-    def _assign_scout_if_none(self, group):
-        scouts = group.select_units(self.bot.units)
-        if not scouts:
-            lings_in_reserve = self.reserve.select_units(self.all_combat_units(UnitTypeId.ZERGLING))
-            if lings_in_reserve:
-                ling = lings_in_reserve.first
-                self.reserve.remove_unit(ling)
-                group.add_unit(ling)
-            else:
+    def _reinforce_from_reserve_if_empty(self, group, unit_type, up_to=200, drone_fallback=False):
+        survivors = group.select_units(self.bot.units)
+        if not survivors:
+            reserves = self.reserve.select_units(self.all_combat_units(unit_type)).take(up_to, require_all=False)
+            for reserve in reserves:
+                self.reserve.remove_unit(reserve)
+                group.add_unit(reserve)
+            if len(reserves) == 0 and drone_fallback:
                 drones_available = self.bot.units(UnitTypeId.DRONE)  # TODO filter drones that have a special job
                 if drones_available:
-                    drone = drones_available.first
-                    group.add_unit(drone)
+                    group.add_unit(drones_available.first)
 
     async def kamikaze(self):
         bot = self.bot
@@ -156,6 +154,17 @@ class ArmyManager:
             bot.debugger.world_text("towards", towards)
             for unit in units:
                 actions.append(unit.attack(bot.army_attack_point))
+        return actions
+
+    def flank(self):
+        actions = []
+        mutas = self.muta_flankers.select_units(self.bot.units).idle
+        if mutas:
+            for muta in mutas:
+                actions.append(muta.move(self.bot.map.flanker_waypoint, queue=False))
+                actions.append(muta.move(self.bot.map.opponent_corner, queue=True))
+                actions.append(muta.attack(self.opponent.known_hq_location, queue=True))
+                actions.append(muta.attack(self.opponent.known_natural, queue=True))
         return actions
 
     def scout_and_harass(self):

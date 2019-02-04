@@ -13,6 +13,7 @@ from bot.economy import economy, tech
 from bot.economy.build import Builder
 from bot.util.debug import DebugPrinter
 from bot.util.log import TerminalLogger
+from bot.util.map import Map
 from bot.util.timer import Timer
 
 
@@ -23,6 +24,7 @@ class MyBot(sc2.BotAI):
         self.opponent = Opponent(self)
         self.army = ArmyManager(self)
         self.builder = Builder(self)
+        self.map = Map(self)
         
         self.drone_eco_optimization_timer = Timer(self, 0.2)
         self.army_timer = Timer(self, 0.05)
@@ -48,6 +50,7 @@ class MyBot(sc2.BotAI):
         self.army_attack_point = self.hq_front_door
         self.opponent.deferred_init()
         self.army.deferred_init()
+        self.map.deferred_init()
         self.logger.log("First step took {:.2f}s".format(time.time() - start))
 
     def on_end(self, result):
@@ -94,6 +97,7 @@ class MyBot(sc2.BotAI):
             actions += self.army.patrol_with_overlords()
             actions += self.army.scout_and_harass()
             actions += self.army.scout_no_mans_expansions()
+            actions += self.army.flank()
             actions += self.army.base_defend()
 
         if self.build_timer.rings:
