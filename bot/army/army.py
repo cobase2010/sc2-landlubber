@@ -173,12 +173,10 @@ class ArmyManager:
                         closest_enemy = enemies_closeby.closest_to(scout)
                         actions.append(scout.move(util.away(scout.position, closest_enemy.position, 4)))
 
-        # Home base door verification
-        else:
-            if not self.has_verified_front_door:
-                for ramp in self.bot._game_info.map_ramps:
-                    for scout in scouts:
-                        if scout.distance_to(ramp.top_center) < 7:
+                # Home base door verification
+                if not self.has_verified_front_door:
+                    for ramp in self.bot._game_info.map_ramps:
+                        if scout.distance_to(ramp.top_center) < 6:
                             self.has_verified_front_door = True
                             self.bot.hq_front_door = ramp.top_center
                             self.logger.log("Scout verified front door")
