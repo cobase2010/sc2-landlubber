@@ -21,8 +21,8 @@ class MyBot(sc2.BotAI):
         self.logger = TerminalLogger(self)
         self.debugger = DebugPrinter(self)
         self.opponent = Opponent(self)
-        self.builder = Builder(self)
         self.army = ArmyManager(self)
+        self.builder = Builder(self)
         
         self.drone_eco_optimization_timer = Timer(self, 0.2)
         self.army_timer = Timer(self, 0.05)

@@ -16,6 +16,7 @@ class Opponent:
         self.units = None
         self.structures = None
         self.strategy = None
+        self.too_close_distance = 0
 
         if bot.enemy_race != Race.Random:
             self._set_race(bot.enemy_race)
@@ -37,16 +38,21 @@ class Opponent:
             self.logger.log("We know exactly where our enemy HQ is")
             self._set_enemy_hq_and_natural(self.bot.enemy_start_locations[0])
             self.unverified_hq_locations = []
+            self.too_close_distance = self.bot.start_location.distance_to(self.bot._game_info.map_center)
 
     def refresh(self):
         if self.bot.known_enemy_units:
             self.units = self.bot.known_enemy_units
             if self.known_race is None:
                 self._set_race(self.units.first.race)
+        else:
+            self.units = None
 
         if self.bot.known_enemy_structures:
             self.structures = self.bot.known_enemy_structures
-            self.check_proxy()
+        else:
+            self.structures = None
+        self.check_proxy()
 
         if self.unverified_hq_locations:
             for i, base in enumerate(self.unverified_hq_locations):
@@ -63,14 +69,17 @@ class Opponent:
                 self.known_hq_location = None
                 self.logger.log(f"Cleared enemy HQ")
 
+    def is_too_close(self):
+        if self.structures and self.bot.start_location.distance_to_closest(self.structures) < self.too_close_distance:
+            return True
+        return False
+
     def check_proxy(self):
-        hq = self.bot.start_location
-        too_close_distance = hq.distance_to(self.bot._game_info.map_center)
-        if self.structures:
-            if hq.distance_to_closest(self.structures) < too_close_distance:
-                self.logger.warn("Enemy proxy!")
-                self.strategy = Strategy.PROXY
-        elif self.strategy == Strategy.PROXY:
+        if self.is_too_close() and self.strategy != Strategy.PROXY:
+            self.logger.warn("Enemy uses proxy strategy!")
+            self.strategy = Strategy.PROXY
+        elif not self.is_too_close() and self.strategy == Strategy.PROXY:
+            self.logger.info("Enemy proxy beaten for now")
             self.strategy = Strategy.PROXY_ATTEMPTED
 
     def get_next_scoutable_location(self, source_location=None):
@@ -83,7 +92,6 @@ class Opponent:
         elif self.unverified_hq_locations:
             return self.unverified_hq_locations.closest_to(source_location).position
         else:
-            self.logger.error("Our army has no idea where to go")
             return None
 
     def get_next_potential_building_closest_to(self, source):

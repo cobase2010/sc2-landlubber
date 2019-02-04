@@ -1,11 +1,11 @@
 # LandLubber StarCraft 2 bot
 
-This bot plays [StarCraft 2](https://starcraft2.com/). Participates in the [Artificial Overmind Challenge](https://artificial-overmind.reaktor.com/).
+This bot plays [StarCraft 2](https://starcraft2.com/). Written for participation in the 2019 [Artificial Overmind Challenge](https://artificial-overmind.reaktor.com/).
 
 ## Prerequisites
 
 - Python 3.6
-- [python-sc2](https://github.com/Dentosal/python-sc2/) 0.10.10
+- [python-sc2](https://github.com/Dentosal/python-sc2/) 0.10.11
 
 ## Level
 

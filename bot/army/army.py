@@ -36,6 +36,7 @@ class ArmyManager:
 
     def refresh(self):
         self.all_combat_units = self.bot.units(UnitTypeId.ZERGLING).ready | self.bot.units(UnitTypeId.ROACH).ready | self.bot.units(UnitTypeId.HYDRALISK).ready | self.bot.units(UnitTypeId.MUTALISK).ready
+        self.strength = util.get_units_strength(self.bot, self.all_combat_units)
         """
         ControlGroup is actually just a set of unit tags. When units whose tag is added to a CG die, their tags remains in the CG. This is probably not
         a problem, but we could also cleanup the CGs by cycling tags into units and then back to tags. Not sure if worth it performance-wise.
@@ -135,7 +136,7 @@ class ArmyManager:
                     self.logger.debug(f"Tight army advancing ({dispersion:.0f})")
                     towards = bot.opponent.get_next_potential_building_closest_to(bot.army_attack_point)
                     if towards is None:
-                        self.logger.error("Don't know where to go!")
+                        self.logger.error("Army does not know where to go!")
                         return []  # FIXME This prevents a crash on win, but we should start scouting for enemy
 
                 else: # Regroup, too dispersed
@@ -161,7 +162,6 @@ class ArmyManager:
         actions = []
         scouts = self.harassing_base_scouts.select_units(self.bot.units)
         if scouts:
-            location = self.opponent.get_next_scoutable_location()
             for scout in scouts:
                 # Harass workers
                 if self.opponent.known_hq_location and scout.distance_to(self.opponent.known_hq_location) < 3:
@@ -170,7 +170,9 @@ class ArmyManager:
                         victim = worker_enemies.closest_to(scout.position)
                         actions.append(scout.attack(victim))
                 else:
-                    actions.append(scout.move(location))
+                    location = self.opponent.get_next_scoutable_location()
+                    if location:
+                        actions.append(scout.move(location))
                 # Kite
                 if self.opponent.units:
                     enemies_closeby = self.opponent.units.filter(lambda unit: unit.can_attack_ground).closer_than(2, scout)
@@ -233,7 +235,6 @@ class ArmyManager:
                     actions.append(early_warner.patrol(halfway.random_on_distance(5), queue=True))
                     self.early_warning_overlord_ordered = True
             else:
-                self.logger.warn("Enemy is proxy raxing, RTB with early warner!")
                 actions.append(early_warner.move(self.bot.start_location, queue=False))
 
         # Others will patrol around hq

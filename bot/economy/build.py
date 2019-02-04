@@ -1,11 +1,15 @@
 from sc2.ids.unit_typeid import UnitTypeId
 from bot.economy import economy
+from bot.opponent.strategy import Strategy
+from bot.util import util
 
 
 class Builder:
     def __init__(self, bot):
         self.bot = bot
         self.logger = bot.logger
+        self.opponent = bot.opponent
+        self.army = bot.army
 
     async def _build_one(self, it):
         bot = self.bot
@@ -44,6 +48,9 @@ class Builder:
     async def begin_projects(self):
         bot = self.bot
         random_townhall = bot.townhalls.first
+        strategy_penalty_multiplier = 1
+        if self.opponent.strategy in [Strategy.PROXY]:
+            strategy_penalty_multiplier = 1.8
 
         if economy.should_build_hatchery(bot):
             self.logger.log("Building hatchery")
@@ -58,15 +65,17 @@ class Builder:
         if bot.units(UnitTypeId.SPAWNINGPOOL).ready.exists:
             await self._build_one(UnitTypeId.ROACHWARREN)
 
-        if bot.units(UnitTypeId.ROACHWARREN).ready.exists and bot.units(UnitTypeId.ROACH).amount > 5:
+        print(self.army.strength)
+
+        if bot.units(UnitTypeId.ROACHWARREN).ready.exists and self.army.strength >= 600 * strategy_penalty_multiplier:
             if (not bot.units(UnitTypeId.LAIR).exists or bot.already_pending(UnitTypeId.LAIR)) and random_townhall.noqueue:
                 if bot.can_afford(UnitTypeId.LAIR):
                     self.logger.log("Building lair")
                     await bot.do_actions([random_townhall.build(UnitTypeId.LAIR)])
 
-        if bot.units(UnitTypeId.LAIR).ready.exists and len(bot.townhalls.ready) > 1 and bot.units(UnitTypeId.ROACH).amount > 5:
-            await self._build_one(UnitTypeId.EVOLUTIONCHAMBER)
-            await self._build_one(UnitTypeId.SPIRE)
+            if bot.units(UnitTypeId.LAIR).ready.exists and len(bot.townhalls.ready) > 1 and self.army.strength >= 600 * strategy_penalty_multiplier:
+                await self._build_one(UnitTypeId.EVOLUTIONCHAMBER)
+                await self._build_one(UnitTypeId.SPIRE)
 
 
     # Training units
@@ -87,10 +96,9 @@ class Builder:
                     if bot.can_afford(UnitTypeId.MUTALISK) and bot.units(UnitTypeId.SPIRE).ready.exists:
                         actions.append(larva.train(UnitTypeId.MUTALISK))
                         self.logger.debug("Training mutalisk")
-                    elif bot.units(UnitTypeId.ROACHWARREN).ready.exists:
-                        if bot.can_afford(UnitTypeId.ROACH):
-                            actions.append(larva.train(UnitTypeId.ROACH))
-                            self.logger.debug("Training roach")
+                    elif bot.units(UnitTypeId.ROACHWARREN).ready.exists and bot.can_afford(UnitTypeId.ROACH):
+                        actions.append(larva.train(UnitTypeId.ROACH))
+                        self.logger.debug("Training roach")
                     elif bot.can_afford(UnitTypeId.ZERGLING) and bot.units(UnitTypeId.SPAWNINGPOOL).ready.exists:
                         self.logger.debug("Training ling")
                         actions.append(larva.train(UnitTypeId.ZERGLING))
