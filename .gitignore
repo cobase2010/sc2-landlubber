@@ -103,3 +103,4 @@ ENV/
 *.SC2Replay
 
 .vscode
+examples/*
