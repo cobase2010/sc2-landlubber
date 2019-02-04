@@ -80,7 +80,7 @@ def should_train_drone(bot, townhall):
                 probability = DRONE_TRAINING_PROBABILITY_AT_EXPANSIONS
             return util.probability(probability)
     else:
-        bot.logger.log("Reached max number of drones")
+        bot.logger.debug("Reached max number of drones")
         return False
 
 

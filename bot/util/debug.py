@@ -18,7 +18,7 @@ class DebugPrinter:
             self.logger.error("Received None position to draw text")
 
     def print_step_stats(self):
-        self.logger.log("Step durations lately min={:.3f} avg={:.3f} max={:.3f}. Total steps recorded {}".format(
+        self.logger.debug("Step durations lately min={:.3f} avg={:.3f} max={:.3f}. Total steps recorded {}".format(
             min(self.step_durations[-500:]),
             sum(self.step_durations[-500:]) / len(self.step_durations[-500:]),
             max(self.step_durations[-500:]),
@@ -57,11 +57,11 @@ class DebugPrinter:
         ))
 
     def warn_unoptimal_play(self):
-        if self.bot.units(UnitTypeId.LARVA).amount > 3:
+        if self.bot.units(UnitTypeId.LARVA).amount > 4:
             self.logger.log(f"{self.bot.units(UnitTypeId.LARVA).amount} unused larvae!")
         if self.bot.vespene > 500:
             self.logger.warn("Too much gas!")
-        if self.bot.supply_left == 0:
+        if self.bot.supply_left == 0 and self.bot.units(UnitTypeId.OVERLORD).amount > 1:
             self.logger.warn("Not enough overlords!")
 
     def warn_for_step_duration(self, step_start):

@@ -39,7 +39,7 @@ class Builder:
             if bot.units(UnitTypeId.OVERLORD).amount == 1:
                 required_buffer = 0
             else:
-                required_buffer = int((bot.townhalls.ready.amount + bot.units(UnitTypeId.QUEEN).ready.amount) * 0.45 + 2)
+                required_buffer = int((bot.townhalls.ready.amount + bot.units(UnitTypeId.QUEEN).ready.amount) * 0.6 + 2.5)
             buffer = bot.supply_left + (bot.already_pending(UnitTypeId.OVERLORD) * 8)
             should = buffer <= required_buffer and bot.supply_cap < 200
             return should
