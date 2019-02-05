@@ -3,8 +3,9 @@ from sc2.ids.ability_id import AbilityId
 from bot.util import util
 
 HATCHERY_COST = 300
-HATCHERY_COST_BUFFER_INCREMENT = 25
+HATCHERY_COST_BUFFER_INCREMENT = 0
 EXPANSION_DRONE_THRESHOLD = 0.80
+EXPANSION_DRONE_HARD_THRESHOLD = 1.0
 MAX_NUMBER_OF_DRONES = 70
 DRONE_TRAINING_PROBABILITY_AT_EXPANSIONS = 90
 
@@ -18,6 +19,15 @@ def drone_rate_for_towns(townhalls):
     if ideal_drone_count == 0:  # If no jobs available, we should definitely expand
         return 1.0
     return assigned_drones / ideal_drone_count
+
+
+def should_save_for_expansion(bot):
+    if len(bot.townhalls.ready) > 1:
+        if not bot.townhalls.not_ready and not bot.units.find_by_tag(bot.active_expansion_builder):
+            if drone_rate_for_towns(bot.townhalls) >= EXPANSION_DRONE_HARD_THRESHOLD and len(bot.expansions_sorted) > 0:
+                bot.logger.info(f"Saving minerals for a must-have expansion, now {bot.minerals} minerals")
+                return True
+    return False
 
 
 def should_build_hatchery(bot):

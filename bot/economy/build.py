@@ -58,23 +58,24 @@ class Builder:
             bot.active_expansion_builder = drone.tag
             await bot.do_actions([drone.build(UnitTypeId.HATCHERY, bot.expansions_sorted.pop(0))]) # TODO Should not be so naive that sites are available and building will succeed and remain intact
 
-        await self._build_one(UnitTypeId.SPAWNINGPOOL)
+        if not economy.should_save_for_expansion(bot):
+            await self._build_one(UnitTypeId.SPAWNINGPOOL)
 
-        if bot.units(UnitTypeId.SPAWNINGPOOL).exists:
-            await self._ensure_extractors()
-        if bot.units(UnitTypeId.SPAWNINGPOOL).ready.exists:
-            await self._build_one(UnitTypeId.ROACHWARREN)
+            if bot.units(UnitTypeId.SPAWNINGPOOL).exists:
+                await self._ensure_extractors()
+            if bot.units(UnitTypeId.SPAWNINGPOOL).ready.exists:
+                await self._build_one(UnitTypeId.ROACHWARREN)
 
-        if bot.units(UnitTypeId.ROACHWARREN).ready.exists and self.army.strength >= 500 * tech_penalty_multiplier:
-            if (not bot.units(UnitTypeId.LAIR).exists or bot.already_pending(UnitTypeId.LAIR)) and random_townhall.noqueue:
-                if bot.can_afford(UnitTypeId.LAIR):
-                    self.logger.log("Building lair")
-                    await bot.do_actions([random_townhall.build(UnitTypeId.LAIR)])
+            if bot.units(UnitTypeId.ROACHWARREN).ready.exists and self.army.strength >= 500 * tech_penalty_multiplier:
+                if (not bot.units(UnitTypeId.LAIR).exists or bot.already_pending(UnitTypeId.LAIR)) and random_townhall.noqueue:
+                    if bot.can_afford(UnitTypeId.LAIR):
+                        self.logger.log("Building lair")
+                        await bot.do_actions([random_townhall.build(UnitTypeId.LAIR)])
 
-            if bot.units(UnitTypeId.LAIR).ready.exists and len(bot.townhalls.ready) > 1 and self.army.strength >= 500 * tech_penalty_multiplier:
-                await self._build_one(UnitTypeId.EVOLUTIONCHAMBER)
-                # await self._build_one(UnitTypeId.HYDRALISKDEN)
-                await self._build_one(UnitTypeId.SPIRE)
+                if bot.units(UnitTypeId.LAIR).ready.exists and len(bot.townhalls.ready) > 1 and self.army.strength >= 500 * tech_penalty_multiplier:
+                    await self._build_one(UnitTypeId.EVOLUTIONCHAMBER)
+                    # await self._build_one(UnitTypeId.HYDRALISKDEN)
+                    await self._build_one(UnitTypeId.SPIRE)
 
     # Training units
     def train_units(self):
@@ -90,7 +91,7 @@ class Builder:
                 elif economy.should_train_drone(bot, townhall):
                     self.logger.debug("Training drone, current situation at this expansion {}/{}".format(townhall.assigned_harvesters, townhall.ideal_harvesters))
                     actions.append(larva.train(UnitTypeId.DRONE))
-                else:
+                elif not economy.should_save_for_expansion(bot):
                     if bot.can_afford(UnitTypeId.MUTALISK) and bot.units(UnitTypeId.SPIRE).ready.exists:
                         self.logger.debug("Training mutalisk")
                         actions.append(larva.train(UnitTypeId.MUTALISK))
