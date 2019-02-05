@@ -277,9 +277,9 @@ class ArmyManager:
 
         # Others will patrol around hq
         if len(overlords) < 4:
-            patrol = self.bot.hq_front_door.random_on_distance(random.randrange(3, 6))
+            patrol = self.bot.hq_front_door.random_on_distance(random.randrange(3, 8))
         else:
-            patrol = self.bot.start_location.random_on_distance(30)
+            patrol = self.bot.start_location.random_on_distance(40)
         for overlord in overlords.idle.tags_not_in([self.first_overlord_tag, self.early_warning_overlord_tag]):
             actions.append(overlord.move(patrol))
         return actions
