@@ -22,10 +22,11 @@ def drone_rate_for_towns(townhalls):
 
 def should_build_hatchery(bot):
     if not bot.townhalls.not_ready and not bot.units.find_by_tag(bot.active_expansion_builder):
-        if len(bot.units(UnitTypeId.QUEEN)) >= len(bot.townhalls):
-            if drone_rate_for_towns(bot.townhalls) >= EXPANSION_DRONE_THRESHOLD and len(bot.expansions_sorted) > 0:
-                if bot.minerals >= HATCHERY_COST + (HATCHERY_COST_BUFFER_INCREMENT * (len(bot.townhalls) - 1)):
-                    return True
+        # TODO FIXME Testing here if we would expand before queen, not sure.
+        # if len(bot.units(UnitTypeId.QUEEN)) >= len(bot.townhalls):
+        if drone_rate_for_towns(bot.townhalls) >= EXPANSION_DRONE_THRESHOLD and len(bot.expansions_sorted) > 0:
+            if bot.minerals >= HATCHERY_COST + (HATCHERY_COST_BUFFER_INCREMENT * (len(bot.townhalls) - 1)):
+                return True
     return False
 
 
