@@ -7,8 +7,8 @@ class Map:
         self.corners = []
         self.my_corner = None
         self.opponent_corner = None
-        self.helper_corner = None
-        self.flanker_waypoint = None
+        self.helper_corner = None  # the corner furthest away from enemy natural
+        self.flanker_waypoint = None  # point outside enemy base at the edge of the map
 
     def deferred_init(self):
         r = self.bot.game_info.playable_area

@@ -124,7 +124,7 @@ class ArmyManager:
             bot.debugger.world_text("center", units.center)
             strength = util.get_units_strength(bot, units)
             enough = (ARMY_SIZE_BASE_LEVEL + ((bot.time / 60) * ARMY_SIZE_TIME_MULTIPLIER))
-            if self.opponent.strategy == Strategy.PROXY:
+            if Strategy.PROXY in self.opponent.strategies:
                 enough = 50
             towards = None
             if (strength >= enough or bot.supply_used > ARMY_SIZE_MAX):
@@ -233,7 +233,7 @@ class ArmyManager:
         # Second overlord will scout proxy rax
         early_warner = overlords.find_by_tag(self.early_warning_overlord_tag)
         if early_warner:
-            if self.opponent.strategy != Strategy.PROXY:
+            if Strategy.PROXY not in self.opponent.strategies:
                 if not self.early_warning_overlord_ordered:
                     hq = self.bot.start_location
                     center = self.bot.game_info.map_center

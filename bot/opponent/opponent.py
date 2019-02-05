@@ -15,7 +15,7 @@ class Opponent:
         self.army_strength = 0
         self.units = None
         self.structures = None
-        self.strategy = None
+        self.strategies = set()
         self.too_close_distance = 0
 
         if bot.enemy_race != Race.Random:
@@ -75,12 +75,12 @@ class Opponent:
         return False
 
     def check_proxy(self):
-        if self.is_too_close() and self.strategy != Strategy.PROXY:
+        if self.is_too_close() and Strategy.PROXY not in self.strategies:
             self.logger.warn("Enemy uses proxy strategy!")
-            self.strategy = Strategy.PROXY
-        elif not self.is_too_close() and self.strategy == Strategy.PROXY:
+            self.strategies.add(Strategy.PROXY)
+        elif not self.is_too_close() and Strategy.PROXY in self.strategies:
             self.logger.log("Enemy proxy beaten for now")
-            self.strategy = Strategy.PROXY_ATTEMPTED
+            self.strategies.remove(Strategy.PROXY)
 
     def get_next_scoutable_location(self, source_location=None):
         if source_location is None:
