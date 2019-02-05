@@ -236,8 +236,10 @@ class ArmyManager:
         scouts = self.no_mans_expansions_scouts.select_units(self.bot.units)
         if scouts.idle:
             exps = list(self.bot.expansion_locations)
-            exps.remove(self.opponent.known_hq_location)
-            exps.remove(self.opponent.known_natural)
+            if self.opponent.known_hq_location:
+                exps.remove(self.opponent.known_hq_location)
+            if self.opponent.known_natural:
+                exps.remove(self.opponent.known_natural)
             for scout in scouts:
                 self.logger.debug(f"Sending scout {scout} to no man's land")
                 actions.append(scout.move(self.bot.hq_front_door, queue=False))
