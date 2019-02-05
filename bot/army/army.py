@@ -144,10 +144,10 @@ class ArmyManager:
 
                 towards = bot.opponent.get_next_potential_building_closest_to(bot.army_attack_point)
                 if towards is None and Strategy.HIDDEN_BASE not in self.opponent.strategies:
-                    self.logger.warning("Army does not know where to go, time to seek & destroy!")
+                    self.logger.warn("Army does not know where to go, time to seek & destroy!")
                     self.opponent.strategies.add(Strategy.HIDDEN_BASE)
                 elif towards and Strategy.HIDDEN_BASE in self.opponent.strategies:
-                    self.logger.info("Found enemy from hiding!")
+                    self.logger.log("Found enemy from hiding!")
                     self.opponent.strategies.remove(Strategy.HIDDEN_BASE)
 
                 if Strategy.HIDDEN_BASE in self.opponent.strategies:

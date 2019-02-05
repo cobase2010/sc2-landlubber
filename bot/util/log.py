@@ -31,5 +31,11 @@ class TerminalLogger:
     def warn(self, msg):
         self.log(msg, logging.WARNING)
 
+    def warning(self, msg):
+        self.log(msg, logging.WARNING)
+
+    def info(self, msg):
+        self.log(msg, logging.INFO)
+
     def debug(self, msg):
         self.log(msg, logging.DEBUG)
