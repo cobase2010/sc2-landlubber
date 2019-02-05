@@ -25,7 +25,7 @@ def get_tech_to_research(bot, techs):
 def upgrade_tech(bot):
     if UpgradeId.GLIALRECONSTITUTION not in bot.state.upgrades and bot.can_afford(UpgradeId.GLIALRECONSTITUTION):
         if bot.units(UnitTypeId.ROACHWARREN).ready.exists and bot.units(UnitTypeId.LAIR).exists and bot.units(UnitTypeId.ROACHWARREN).ready.noqueue:
-            bot.logger.log("Researching Glial Reconstitution for roaches")
+            bot.logger.debug("Researching Glial Reconstitution for roaches")
             return [bot.units(UnitTypeId.ROACHWARREN).ready.first.research(UpgradeId.GLIALRECONSTITUTION)]
 
     idle_chambers = bot.units(UnitTypeId.EVOLUTIONCHAMBER).ready.noqueue
@@ -40,7 +40,7 @@ def upgrade_tech(bot):
         ]
         tech = get_tech_to_research(bot, research_order)
         if tech:
-            bot.logger.log(f"Researching {tech}")
+            bot.logger.debug(f"Researching {tech}")
             return [idle_chambers.first.research(tech)]
 
     idle_spire = bot.units(UnitTypeId.SPIRE).ready.noqueue
@@ -55,7 +55,7 @@ def upgrade_tech(bot):
         ]
         tech = get_tech_to_research(bot, research_order)
         if tech:
-            bot.logger.log(f"Researching {tech}")
+            bot.logger.debug(f"Researching {tech}")
             return [idle_spire.first.research(tech)]
 
     return []

@@ -103,7 +103,7 @@ class ArmyManager:
             self.logger.log("This base seems to have only one ramp")
             return doors[0].top_center
         else:
-            self.logger.warn("This base seems to several ramps, let's wait for scout to determine front door")
+            self.logger.warn("Base seems to have several ramps, scout will verify")
             return bot.start_location.towards(bot.game_info.map_center, 10)
 
     def _unit_dispersion(self, units):

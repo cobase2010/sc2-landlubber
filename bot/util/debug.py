@@ -41,8 +41,8 @@ class DebugPrinter:
 
     def print_score(self):
         s = self.bot.state.score
-        self.logger.log("score  unit stru   minerals    gas      rate     idle")
-        self.logger.log("{:5} {:5.0f} {:4.0f} {:5.0f}/{:5.0f} {:3.0f}/{:3.0f} {:4.0f}/{:3.0f} {:.0f}/{:.0f}".format(
+        self.logger.debug("score  unit stru   minerals    gas      rate     idle")
+        self.logger.debug("{:5} {:5.0f} {:4.0f} {:5.0f}/{:5.0f} {:3.0f}/{:3.0f} {:4.0f}/{:3.0f} {:.0f}/{:.0f}".format(
             s.score,
             s.total_value_units,
             s.total_value_structures,
@@ -58,7 +58,12 @@ class DebugPrinter:
 
     def warn_unoptimal_play(self):
         if self.bot.units(UnitTypeId.LARVA).amount > 4:
-            self.logger.log(f"{self.bot.units(UnitTypeId.LARVA).amount} unused larvae!")
+            reason = f"UNKNOWN REASON (min={self.bot.minerals} gas={self.bot.vespene} supply={self.bot.supply_left})"
+            if self.bot.minerals < 100:
+                reason = "not enough minerals"
+            elif self.bot.supply_left < 2:
+                reason = "not enough overlords"
+            self.logger.log(f"{self.bot.units(UnitTypeId.LARVA).amount} unused larvae because {reason}!")
         if self.bot.vespene > 500:
             self.logger.warn("Too much gas!")
         if self.bot.supply_left == 0 and self.bot.units(UnitTypeId.OVERLORD).amount > 1:

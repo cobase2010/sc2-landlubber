@@ -64,7 +64,7 @@ class Opponent:
                     else:
                         self.logger.log(f"Scouted potential enemy hq location {base} which turned out empty")
 
-        if self.known_hq_location and self.bot.units.closest_distance_to(self.known_hq_location) < 5:
+        if self.known_hq_location and self.bot.units.closest_distance_to(self.known_hq_location) < 7:
             if not self.structures or self.structures.closest_distance_to(self.known_hq_location) > 20:
                 self.known_hq_location = None
                 self.logger.log(f"Cleared enemy HQ")

@@ -84,7 +84,7 @@ class Builder:
             if town_larvae.exists:
                 larva = town_larvae.random
                 if self._should_train_overlord():
-                    self.logger.log("<-- Training overlord")
+                    self.logger.log("<- Training overlord")
                     actions.append(larva.train(UnitTypeId.OVERLORD))
                 elif economy.should_train_drone(bot, townhall):
                     self.logger.debug("Training drone, current situation at this expansion {}/{}".format(townhall.assigned_harvesters, townhall.ideal_harvesters))
@@ -98,7 +98,7 @@ class Builder:
                             self.logger.debug("Training roach")
                             actions.append(larva.train(UnitTypeId.ROACH))
                         elif bot.minerals > 400 and bot.units(UnitTypeId.LARVA).amount > 5:
-                            self.logger.log("Training late ling because excessive minerals")
+                            self.logger.debug("Training late ling because excessive minerals")
                             actions.append(larva.train(UnitTypeId.ZERGLING))
                     elif bot.can_afford(UnitTypeId.ZERGLING) and bot.units(UnitTypeId.SPAWNINGPOOL).ready.exists:
                         self.logger.debug("Training ling")
@@ -106,6 +106,6 @@ class Builder:
             if bot.units(UnitTypeId.SPAWNINGPOOL).ready.exists and townhall.is_ready and townhall.noqueue:
                 if bot.can_afford(UnitTypeId.QUEEN):
                     if not bot.units(UnitTypeId.QUEEN).closer_than(15, townhall):
-                        self.logger.log("Training queen")
+                        self.logger.debug("Training queen")
                         actions.append(townhall.train(UnitTypeId.QUEEN))
         return actions
