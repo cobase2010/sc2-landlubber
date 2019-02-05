@@ -57,7 +57,6 @@ More detailed scores:
     6.0  75/ 76  7274  5500 1075  6075/ 6200 925/1124 1679/313 0/1988
     8.0 119/130 11280  8900 1825  9575/ 9590 1850/2240 2071/649 0/3108
 
-
 ## Notes on performance and timing
 
 **On non-real-time:** In the beginning of a match, the game tends to run on 30x speed, i.e. when 1 real-time second passes, 30 in-game seconds have passed. The speed then gradually slows down as players build larger forces. In the end-game the speed is around 10-15x. The game seems to run a fixed number of steps per in-game second, meaning that the execution time of a match grows if bots need more time for calculations. But, this means that it is safe to make assumptions on `on_step` iteration count and/or `self.time`.
