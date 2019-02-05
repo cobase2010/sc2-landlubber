@@ -126,6 +126,12 @@ class ArmyManager:
             actions.append(unit.attack(point))
         return actions
 
+    def _large_enough_army(self, strength):
+        enough = (ARMY_SIZE_BASE_LEVEL + ((self.bot.time / 60) * ARMY_SIZE_TIME_MULTIPLIER))
+        if Strategy.PROXY in self.opponent.strategies:
+            enough = 50
+        return strength >= enough or self.bot.supply_used > ARMY_SIZE_MAX
+
     # Attack to enemy base
     def get_army_actions(self):
         bot = self.bot
@@ -135,12 +141,8 @@ class ArmyManager:
         units = self.reserve.select_units(bot.units)
         if units:
             bot.debugger.world_text("center", units.center)
-            strength = util.get_units_strength(bot, units)
-            enough = (ARMY_SIZE_BASE_LEVEL + ((bot.time / 60) * ARMY_SIZE_TIME_MULTIPLIER))
-            if Strategy.PROXY in self.opponent.strategies:
-                enough = 50
             towards = None
-            if (strength >= enough or bot.supply_used > ARMY_SIZE_MAX):
+            if self._large_enough_army(util.get_units_strength(bot, units)):
 
                 towards = bot.opponent.get_next_potential_building_closest_to(bot.army_attack_point)
                 if towards is None and Strategy.HIDDEN_BASE not in self.opponent.strategies:
@@ -160,20 +162,31 @@ class ArmyManager:
                     else: # Regroup, too dispersed
                         main_force = units.closer_than(ARMY_MAIN_FORCE_RADIUS, units.center)
                         if main_force:
-                            self.logger.debug(f"Army is slightly dispersed ({dispersion:.0f})")
+                            self.logger.log(f"Army is slightly dispersed ({dispersion:.0f})")
                             towards = main_force.center
                         else:
-                            self.logger.debug(f"Army is TOTALLY scattered")
+                            self.logger.log(f"Army is TOTALLY scattered")
                             towards = units.center
 
             else: # Retreat, too weak!
-                self.logger.debug(f"Army is too small, retreating!")
+                self.logger.log(f"Army is too small, retreating!")
                 towards = bot.hq_front_door
 
             bot.army_attack_point = towards
-            bot.debugger.world_text("towards", towards)
             for unit in units:
                 actions.append(unit.attack(bot.army_attack_point))
+
+            bot.debugger.world_text("towards", towards)
+            main = units.closer_than(ARMY_MAIN_FORCE_RADIUS, units.center)
+            if main:
+                main_lead = units.closest_to(towards)
+                bot.debugger.world_text("main_force", main.center)
+                bot.debugger.world_text("main_lead", main_lead.position)
+            lead = units.closest_to(towards)
+            if lead:
+                bot.debugger.world_text("lead", lead.position)
+
+
         return actions
 
     def flank(self):
