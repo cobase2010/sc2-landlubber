@@ -118,11 +118,9 @@ class ArmyManager:
         actions = []
         for unit in units:
             if self.opponent.units:
-                point = self.opponent.units.random.position.random_on_distance(random.randrange(3, 10))
-                print("S&D to known enemy")
+                point = self.opponent.units.random.position.random_on_distance(random.randrange(5, 15))
             else:
                 point = self.bot.map.get_random_point()
-                print("S&D all over the map")
             actions.append(unit.attack(point))
         return actions
 
