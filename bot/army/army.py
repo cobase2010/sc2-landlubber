@@ -31,6 +31,7 @@ class ArmyManager:
         self.harassing_base_scouts = ControlGroup([])
         self.no_mans_expansions_scouts = ControlGroup([])
         self.muta_flankers = ControlGroup([])
+        self.base_defenders = ControlGroup([])
 
     def deferred_init(self):
         self.first_overlord_tag = self.bot.units(UnitTypeId.OVERLORD).first.tag
@@ -46,7 +47,7 @@ class ArmyManager:
         """
 
         # Add unassigned units to reserve
-        unassigned = self.all_combat_units.tags_not_in(self.reserve | self.harassing_base_scouts | self.no_mans_expansions_scouts | self.muta_flankers)
+        unassigned = self.all_combat_units.tags_not_in(self.reserve | self.harassing_base_scouts | self.no_mans_expansions_scouts | self.muta_flankers | self.base_defenders)
         if unassigned:
             self.reserve.add_units(unassigned)
 
@@ -289,27 +290,63 @@ class ArmyManager:
             return True
         return False
 
+    def _get_enemies_that_should_be_evicted_from_base(self, town):
+        enemies = self.opponent.units.closer_than(6, town).exclude_type(UnitTypeId.OVERLORD)
+        if enemies:
+            return enemies
+        else:
+            buildings = self.opponent.structures.closer_than(15, town)
+            if buildings:
+                return buildings
+        return None
+
     # Base defend
     def base_defend(self):
-        bot = self.bot
         actions = []
-        for town in bot.townhalls:
-            enemies = bot.known_enemy_units.closer_than(15, town).exclude_type(UnitTypeId.OVERLORD)
-            if enemies:
-                enemy = enemies.closest_to(town)
-                defenders = self.all_combat_units.idle.closer_than(40, town)
-                if defenders:
-                    bot.logger.debug(f"Defending our base with {defenders.amount} units against {enemies.amount} enemies")
-                    for unit in defenders:
-                        actions.append(unit.attack(enemy.position))  # Attack the position, not the unit, to avoid being lured
+        for town in self.bot.townhalls:
+            if self.opponent.units:
+                enemies = self._get_enemies_that_should_be_evicted_from_base(town)
+                if enemies and enemies.not_flying:  # Ground enemies are in this town
+                    enemy = enemies.closest_to(town)
+
+                    # Gather defenders
+                    new_defenders = self.reserve.select_units(self.all_combat_units).idle.closer_than(30, town)
+                    self.reserve.remove_units(new_defenders)
+                    self.base_defenders.add_units(new_defenders)
+
+                    armed_and_existing_defenders = self.base_defenders.select_units(self.bot.units)
+                    if not armed_and_existing_defenders:
+                        drones = self.bot.units(UnitTypeId.DRONE).closer_than(15, town)
+                        if drones:
+                            self.base_defenders.add_units(drones)
+                            self.logger.log(f"Resorting to add {drones.amount} drones to defenders")
+
+                    # TODO FIXME This will probably bug if several bases are under attack at the same time
+                    all_defenders = self.base_defenders.select_units(self.bot.units)
+                    if all_defenders:
+                        self.logger.log(f"Defending our base against {enemies.amount} enemies with {all_defenders.amount} defenders: {all_defenders}")
+                        for defender in all_defenders:
+                            actions.append(defender.attack(enemy.position))
+
+                    # if self.is_worker_rush(town, enemies) or Strategy.CANNON_RUSH in self.opponent.strategies:
+                    #     self.logger.warn("We are being cheesed!")
+                    #     for drone in bot.units(UnitTypeId.DRONE).closer_than(30, town):
+                    #         actions.append(drone.attack(enemy.position))
+
                 else:
-                    bot.logger.debug(f"Enemy attacking our base with {enemies.amount} units but no defenders left!")
+                    if enemies and enemies.flying:
+                        self.logger.warn("Enemies (not-overlords) flying in our base, not implemented!")
 
-                if self.is_worker_rush(town, enemies) or Strategy.CANNON_RUSH in self.opponent.strategies:
-                    bot.logger.warn("We are being cheesed!")
-                    for drone in bot.units(UnitTypeId.DRONE).closer_than(30, town):
-                        actions.append(drone.attack(enemy.position))
+            # Base defenders back to work
+            if self.base_defenders and not (self.opponent.units and self.opponent.units.closer_than(10, town).exclude_type(UnitTypeId.OVERLORD)):
+                defenders = self.base_defenders.select_units(self.bot.units)
+                self.logger.log(f"{defenders.amount} defenders calming down")
+                for unit in defenders:
+                    self.base_defenders.remove_unit(unit)
+                    if unit.type_id == UnitTypeId.DRONE:
+                        actions.append(unit.move(town.position))
+                    else:
+                        self.reserve.add_unit(unit)
+                        actions.append(unit.move(self.bot.hq_front_door))
 
-                if len(enemies) == 1:
-                    bot.logger.debug("Enemy is probably scouting our base")
         return actions
