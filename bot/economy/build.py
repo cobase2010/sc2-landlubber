@@ -73,7 +73,7 @@ class Builder:
 
             if bot.units(UnitTypeId.LAIR).ready.exists and len(bot.townhalls.ready) > 1 and self.army.strength >= 500 * tech_penalty_multiplier:
                 await self._build_one(UnitTypeId.EVOLUTIONCHAMBER)
-                await self._build_one(UnitTypeId.HYDRALISKDEN)
+                # await self._build_one(UnitTypeId.HYDRALISKDEN)
                 await self._build_one(UnitTypeId.SPIRE)
 
     # Training units
@@ -94,9 +94,9 @@ class Builder:
                     if bot.can_afford(UnitTypeId.MUTALISK) and bot.units(UnitTypeId.SPIRE).ready.exists:
                         self.logger.debug("Training mutalisk")
                         actions.append(larva.train(UnitTypeId.MUTALISK))
-                    if bot.can_afford(UnitTypeId.HYDRALISK) and bot.units(UnitTypeId.HYDRALISKDEN).ready.exists:
-                        self.logger.debug("Training hydralisk")
-                        actions.append(larva.train(UnitTypeId.HYDRALISK))
+                    # if bot.can_afford(UnitTypeId.HYDRALISK) and bot.units(UnitTypeId.HYDRALISKDEN).ready.exists:
+                    #     self.logger.debug("Training hydralisk")
+                    #     actions.append(larva.train(UnitTypeId.HYDRALISK))
                     elif bot.units(UnitTypeId.ROACHWARREN).ready.exists:
                         if bot.can_afford(UnitTypeId.ROACH):
                             self.logger.debug("Training roach")
