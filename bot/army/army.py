@@ -10,8 +10,8 @@ MAX_BASE_DOOR_RANGE = 30
 ARMY_SIZE_BASE_LEVEL = 200
 ARMY_SIZE_TIME_MULTIPLIER = 80
 ARMY_SIZE_MAX = 180
-ARMY_DISPERSION_MAX = 15
-ARMY_MAIN_FORCE_RADIUS = 25 # 15 yo-yos too much back and forth, 30 is almost slightly too string-like march.
+ARMY_MAIN_FORCE_DISPERSION_MAX = 5
+ARMY_MAIN_FORCE_RADIUS = 15
 
 
 class ArmyManager:
@@ -156,36 +156,30 @@ class ArmyManager:
                     return self.get_seek_and_destroy_actions(units.idle)
 
                 if towards:
-                    dispersion = self._unit_dispersion(units)
-                    if dispersion < ARMY_DISPERSION_MAX: # Attack!
-                        self.logger.debug(f"Tight army advancing ({dispersion:.0f})")
-                    else: # Regroup, too dispersed
-                        main_force = units.closer_than(ARMY_MAIN_FORCE_RADIUS, units.center)
-                        if main_force:
-                            self.logger.log(f"Army is slightly dispersed ({dispersion:.0f})")
-                            towards = main_force.center
+                    leader = units.closest_to(towards)
+                    if leader:
+                        bot.debugger.world_text("leader", leader.position)
+                        main_pack = units.closer_than(ARMY_MAIN_FORCE_RADIUS, leader.position)
+                        if main_pack.amount > 1:
+                            bot.debugger.world_text("blob", main_pack.center)
+                            dispersion = self._unit_dispersion(main_pack)
+                            if dispersion < ARMY_MAIN_FORCE_DISPERSION_MAX: # Attack!
+                                self.logger.debug(f"Tight main force advancing ({dispersion:.0f})")
+                            else: # Regroup, too dispersed
+                                self.logger.log(f"Main force is slightly dispersed ({dispersion:.0f})")
+                                towards = leader.position
                         else:
-                            self.logger.log(f"Army is TOTALLY scattered")
+                            self.logger.warning(f"Leader is too alone, pulling back!")
                             towards = units.center
 
             else: # Retreat, too weak!
-                self.logger.log(f"Army is too small, retreating!")
+                self.logger.debug(f"Army is too small, retreating!")
                 towards = bot.hq_front_door
 
+            bot.debugger.world_text("towards", towards)
             bot.army_attack_point = towards
             for unit in units:
                 actions.append(unit.attack(bot.army_attack_point))
-
-            bot.debugger.world_text("towards", towards)
-            main = units.closer_than(ARMY_MAIN_FORCE_RADIUS, units.center)
-            if main:
-                main_lead = units.closest_to(towards)
-                bot.debugger.world_text("main_force", main.center)
-                bot.debugger.world_text("main_lead", main_lead.position)
-            lead = units.closest_to(towards)
-            if lead:
-                bot.debugger.world_text("lead", lead.position)
-
 
         return actions
 
