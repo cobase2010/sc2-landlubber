@@ -5,7 +5,7 @@ class TerminalLogger:
     def __init__(self, bot):
         self.bot = bot
         self.logger = logging.getLogger(__name__)
-        self.logger.setLevel(logging.INFO)
+        self.logger.setLevel(logging.WARNING)
         self.logger.propagate = False
         log_format = logging.Formatter('%(levelname)-7s %(message)s')
         handler = logging.StreamHandler()
