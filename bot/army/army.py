@@ -295,9 +295,10 @@ class ArmyManager:
         if enemies:
             return enemies
         else:
-            buildings = self.opponent.structures.closer_than(15, town)
-            if buildings:
-                return buildings
+            if self.opponent.structures:
+                buildings = self.opponent.structures.closer_than(15, town)
+                if buildings:
+                    return buildings
         return None
 
     # Base defend
