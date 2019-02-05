@@ -57,21 +57,19 @@ class MyBot(sc2.BotAI):
         self.logger.log(f"Game ended in {result} with score {self.state.score.score}")
 
     async def on_step(self, iteration):
-        # TODO FIXME Before the deadline, switch raise to return and wrap in try-except
-        step_start = time.time()
-        budget = self.time_budget_available  # pylint: disable=no-member
-        if budget and budget < 0.3:
-            self.logger.error(f"Skipping step to avoid post-cooldown vegetable bug, budget {budget:.3f}")
-            self.debugger.step_durations.append(time.time() - step_start)
-            # return
-            raise Exception
-        else:
-            await self.main_loop()
-            self.debugger.warn_for_step_duration(step_start)
-            self.debugger.step_durations.append(time.time() - step_start)
-            # try:
-            # except Exception as e:
-            #     print("ONLY SUCKERS CRASH!", e)
+        try:
+            step_start = time.time()
+            budget = self.time_budget_available  # pylint: disable=no-member
+            if budget and budget < 0.3:
+                self.logger.error(f"Skipping step to avoid post-cooldown vegetable bug, budget {budget:.3f}")
+                self.debugger.step_durations.append(time.time() - step_start)
+            else:
+                await self.main_loop()
+                self.debugger.warn_for_step_duration(step_start)
+                self.debugger.step_durations.append(time.time() - step_start)
+        except Exception as crash:
+            print("ONLY SUCKERS CRASH!", crash)
+            # raise crash
 
     async def main_loop(self):
         if self.state.action_errors:
