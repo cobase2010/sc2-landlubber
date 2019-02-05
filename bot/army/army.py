@@ -296,7 +296,7 @@ class ArmyManager:
         bot = self.bot
         actions = []
         for town in bot.townhalls:
-            enemies = bot.known_enemy_units.closer_than(20, town)
+            enemies = bot.known_enemy_units.closer_than(15, town)
             if enemies:
                 enemy = enemies.closest_to(town)
                 defenders = self.all_combat_units.idle.closer_than(40, town)
@@ -307,9 +307,9 @@ class ArmyManager:
                 else:
                     bot.logger.debug(f"Enemy attacking our base with {enemies.amount} units but no defenders left!")
 
-                if self.is_worker_rush(town, enemies):
-                    bot.logger.warn("We are being worker rushed!")
-                    for drone in bot.units(UnitTypeId.DRONE).closer_than(60, town):
+                if self.is_worker_rush(town, enemies) or Strategy.CANNON_RUSH in self.opponent.strategies:
+                    bot.logger.warn("We are being cheesed!")
+                    for drone in bot.units(UnitTypeId.DRONE).closer_than(30, town):
                         actions.append(drone.attack(enemy.position))
 
                 if len(enemies) == 1:

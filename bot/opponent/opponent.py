@@ -52,6 +52,7 @@ class Opponent:
         if self.bot.known_enemy_structures:
             self.structures = self.bot.known_enemy_structures
             self.check_rush()
+            self.check_cannon_rush()
         else:
             self.structures = None
         self.check_proxy()
@@ -71,8 +72,10 @@ class Opponent:
                 self.known_hq_location = None
                 self.logger.log(f"Cleared enemy HQ")
 
-    def is_too_close(self):
-        if self.bot.start_location.distance_to_closest(self.structures) < self.too_close_distance:
+    def is_too_close(self, distance=None):
+        if not distance:
+            distance = self.too_close_distance
+        if self.bot.start_location.distance_to_closest(self.structures) < distance:
             return True
         return False
 
@@ -99,6 +102,13 @@ class Opponent:
                 else:
                     self.logger.warn("Enemy has a pool but we don't!")
                     self.strategies.add(Strategy.ZERGLING_RUSH)
+
+    def check_cannon_rush(self):
+        if self.known_race == Race.Protoss:
+            if Strategy.CANNON_RUSH not in self.strategies and self.is_too_close(15):
+                self.strategies.add(Strategy.CANNON_RUSH)
+            elif Strategy.CANNON_RUSH in self.strategies and not self.is_too_close(15):
+                self.strategies.remove(Strategy.CANNON_RUSH)
 
     def get_next_scoutable_location(self, source_location=None):
         if source_location is None:
