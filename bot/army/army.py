@@ -7,7 +7,7 @@ from bot.util import util
 from bot.opponent.strategy import Strategy
 
 MAX_BASE_DOOR_RANGE = 30
-ARMY_SIZE_BASE_LEVEL = 200
+ARMY_SIZE_BASE_LEVEL = 150
 ARMY_SIZE_TIME_MULTIPLIER = 80
 ARMY_SIZE_MAX = 180
 ARMY_MAIN_FORCE_DISPERSION_MAX = 5
