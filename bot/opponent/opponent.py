@@ -1,4 +1,5 @@
 from sc2 import Race, Difficulty
+from sc2.ids.unit_typeid import UnitTypeId
 from bot.opponent.strategy import Strategy
 
 
@@ -50,6 +51,7 @@ class Opponent:
 
         if self.bot.known_enemy_structures:
             self.structures = self.bot.known_enemy_structures
+            self.check_rush()
         else:
             self.structures = None
         self.check_proxy()
@@ -64,23 +66,39 @@ class Opponent:
                     else:
                         self.logger.log(f"Scouted potential enemy hq location {base} which turned out empty")
 
-        if self.known_hq_location and self.bot.units.closest_distance_to(self.known_hq_location) < 7:
+        if self.known_hq_location and self.bot.units.closest_distance_to(self.known_hq_location) < 3:
             if not self.structures or self.structures.closest_distance_to(self.known_hq_location) > 20:
                 self.known_hq_location = None
                 self.logger.log(f"Cleared enemy HQ")
 
     def is_too_close(self):
-        if self.structures and self.bot.start_location.distance_to_closest(self.structures) < self.too_close_distance:
+        if self.bot.start_location.distance_to_closest(self.structures) < self.too_close_distance:
             return True
         return False
 
     def check_proxy(self):
-        if self.is_too_close() and Strategy.PROXY not in self.strategies:
-            self.logger.warn("Enemy uses proxy strategy!")
-            self.strategies.add(Strategy.PROXY)
-        elif not self.is_too_close() and Strategy.PROXY in self.strategies:
-            self.logger.log("Enemy proxy beaten for now")
-            self.strategies.remove(Strategy.PROXY)
+        # Known issue: This does not clear proxy status until we find more enemy buildings (in their hq for example)
+        # This is to circumvent the issues that in some steps the structure list might return empty (which seemed to be due to running locally bot vs. bot)
+        if self.structures:
+            if self.is_too_close() and Strategy.PROXY not in self.strategies:
+                self.logger.warn("Enemy uses proxy strategy!")
+                self.strategies.add(Strategy.PROXY)
+            elif not self.is_too_close() and Strategy.PROXY in self.strategies:
+                self.logger.log("Enemy proxy beaten for now")
+                self.strategies.remove(Strategy.PROXY)
+
+    def check_rush(self):
+        if self.bot.time < 60 * 5 and self.known_race == Race.Zerg and Strategy.ZERGLING_RUSH not in self.strategies:
+            opponent_pools = self.structures(UnitTypeId.SPAWNINGPOOL)
+            if opponent_pools.exists:
+                bot_pools = self.bot.units(UnitTypeId.SPAWNINGPOOL)
+                if bot_pools.exists:
+                    if opponent_pools.first.build_progress - bot_pools.first.build_progress > 0.2:
+                        self.logger.warn("Enemy has an earlier pool than we do, probably a zergling rush!")
+                        self.strategies.add(Strategy.ZERGLING_RUSH)
+                else:
+                    self.logger.warn("Enemy has a pool but we don't!")
+                    self.strategies.add(Strategy.ZERGLING_RUSH)
 
     def get_next_scoutable_location(self, source_location=None):
         if source_location is None:
