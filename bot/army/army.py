@@ -296,7 +296,7 @@ class ArmyManager:
         bot = self.bot
         actions = []
         for town in bot.townhalls:
-            enemies = bot.known_enemy_units.closer_than(15, town)
+            enemies = bot.known_enemy_units.closer_than(15, town).exclude_type(UnitTypeId.OVERLORD)
             if enemies:
                 enemy = enemies.closest_to(town)
                 defenders = self.all_combat_units.idle.closer_than(40, town)
