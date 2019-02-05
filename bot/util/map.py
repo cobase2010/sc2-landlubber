@@ -1,3 +1,4 @@
+import random
 from sc2.position import Point2
 
 
@@ -28,3 +29,9 @@ class Map:
 
         distance = self.helper_corner.distance_to(self.opponent_corner)
         self.flanker_waypoint = self.helper_corner.towards(self.opponent_corner, distance * 0.7)
+
+    def get_random_point(self):
+        r = self.bot.game_info.playable_area
+        x = random.randrange(r.x, r.x + r.width)
+        y = random.randrange(r.y, r.y + r.heights)
+        return Point2((x, y))

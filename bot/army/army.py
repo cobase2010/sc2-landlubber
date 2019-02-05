@@ -113,6 +113,19 @@ class ArmyManager:
         else:
             return 0
 
+    def get_seek_and_destroy_actions(self, units):
+        # TODO sub-optimize by sending mutas to map corners
+        actions = []
+        for unit in units:
+            if self.opponent.units:
+                point = self.opponent.units.random.random_on_distance(random.randrange(3, 10))
+                print("S&D to known enemy")
+            else:
+                point = self.bot.map.get_random_point()
+                print("S&D all over the map")
+            actions.append(unit.attack(point))
+        return actions
+
     # Attack to enemy base
     def get_army_actions(self):
         bot = self.bot
@@ -128,23 +141,30 @@ class ArmyManager:
                 enough = 50
             towards = None
             if (strength >= enough or bot.supply_used > ARMY_SIZE_MAX):
-                dispersion = self._unit_dispersion(units)
 
-                if dispersion < ARMY_DISPERSION_MAX: # Attack!
-                    self.logger.debug(f"Tight army advancing ({dispersion:.0f})")
-                    towards = bot.opponent.get_next_potential_building_closest_to(bot.army_attack_point)
-                    if towards is None:
-                        self.logger.error("Army does not know where to go!")
-                        return []  # FIXME This prevents a crash on win, but we should start scouting for enemy
+                towards = bot.opponent.get_next_potential_building_closest_to(bot.army_attack_point)
+                if towards is None and Strategy.HIDDEN_BASE not in self.opponent.strategies:
+                    self.logger.warning("Army does not know where to go, time to seek & destroy!")
+                    self.opponent.strategies.add(Strategy.HIDDEN_BASE)
+                elif towards and Strategy.HIDDEN_BASE in self.opponent.strategies:
+                    self.logger.info("Found enemy from hiding!")
+                    self.opponent.strategies.remove(Strategy.HIDDEN_BASE)
 
-                else: # Regroup, too dispersed
-                    main_force = units.closer_than(ARMY_MAIN_FORCE_RADIUS, units.center)
-                    if main_force:
-                        self.logger.debug(f"Army is slightly dispersed ({dispersion:.0f})")
-                        towards = main_force.center
-                    else:
-                        self.logger.debug(f"Army is TOTALLY scattered")
-                        towards = units.center
+                if Strategy.HIDDEN_BASE in self.opponent.strategies:
+                    return self.get_seek_and_destroy_actions(units.idle)
+
+                if towards:
+                    dispersion = self._unit_dispersion(units)
+                    if dispersion < ARMY_DISPERSION_MAX: # Attack!
+                        self.logger.debug(f"Tight army advancing ({dispersion:.0f})")
+                    else: # Regroup, too dispersed
+                        main_force = units.closer_than(ARMY_MAIN_FORCE_RADIUS, units.center)
+                        if main_force:
+                            self.logger.debug(f"Army is slightly dispersed ({dispersion:.0f})")
+                            towards = main_force.center
+                        else:
+                            self.logger.debug(f"Army is TOTALLY scattered")
+                            towards = units.center
 
             else: # Retreat, too weak!
                 self.logger.debug(f"Army is too small, retreating!")
