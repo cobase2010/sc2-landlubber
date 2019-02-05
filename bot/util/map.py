@@ -33,5 +33,5 @@ class Map:
     def get_random_point(self):
         r = self.bot.game_info.playable_area
         x = random.randrange(r.x, r.x + r.width)
-        y = random.randrange(r.y, r.y + r.heights)
+        y = random.randrange(r.y, r.y + r.height)
         return Point2((x, y))
