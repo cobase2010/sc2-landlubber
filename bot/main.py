@@ -25,7 +25,7 @@ class MyBot(sc2.BotAI):
         self.army = ArmyManager(self)
         self.builder = Builder(self)
         self.map = Map(self)
-        
+
         self.drone_eco_optimization_timer = Timer(self, 0.2)
         self.army_timer = Timer(self, 0.05)
         self.build_timer = Timer(self, 0.5)
@@ -62,11 +62,10 @@ class MyBot(sc2.BotAI):
             budget = self.time_budget_available  # pylint: disable=no-member
             if budget and budget < 0.3:
                 self.logger.error(f"Skipping step to avoid post-cooldown vegetable bug, budget {budget:.3f}")
-                self.debugger.step_durations.append(time.time() - step_start)
             else:
                 await self.main_loop()
                 self.debugger.warn_for_step_duration(step_start)
-                self.debugger.step_durations.append(time.time() - step_start)
+            self.debugger.step_durations.append(time.time() - step_start)
         except Exception as crash:
             print("ONLY SUCKERS CRASH!", crash)
 
@@ -86,7 +85,7 @@ class MyBot(sc2.BotAI):
         actions = []
 
         if self.drone_eco_optimization_timer.rings:
-            await economy.reassign_overideal_drones(self)  # TODO combine to drone actions below
+            await economy.reassign_overideal_drones(self)
             actions += economy.get_drone_actions(self)
 
         if self.army_timer.rings:
