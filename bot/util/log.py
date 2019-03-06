@@ -5,7 +5,7 @@ class TerminalLogger:
     def __init__(self, bot):
         self.bot = bot
         self.logger = logging.getLogger(__name__)
-        self.logger.setLevel(logging.WARNING)
+        self.logger.setLevel(logging.INFO)
         self.logger.propagate = False
         log_format = logging.Formatter('%(levelname)-7s %(message)s')
         handler = logging.StreamHandler()
@@ -17,7 +17,7 @@ class TerminalLogger:
             if hasattr(self.bot, "state"):
                 self.logger.log(level, "{:4.1f} {:3}/{:<3} {}".format(
                     self.bot.time / 60,
-                    self.bot.supply_used, 
+                    self.bot.supply_used,
                     self.bot.supply_cap,
                     msg))
             else:

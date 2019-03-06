@@ -23,7 +23,7 @@ def main():
     race = Race[info["race"]]
 
     run_game(
-        pick_map(),
+        pick_map(True),
         [
             Bot(race, MyBot()),
             Computer(Race.Random, Difficulty.VeryHard)

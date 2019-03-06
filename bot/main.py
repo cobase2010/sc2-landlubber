@@ -67,7 +67,8 @@ class MyBot(sc2.BotAI):
                 self.debugger.warn_for_step_duration(step_start)
             self.debugger.step_durations.append(time.time() - step_start)
         except Exception as crash:
-            print("ONLY SUCKERS CRASH!", crash)
+            # print("ONLY SUCKERS CRASH!", crash)
+            raise crash
 
     async def main_loop(self):
         if self.state.action_errors:
