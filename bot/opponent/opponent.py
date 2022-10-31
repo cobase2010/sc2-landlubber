@@ -1,4 +1,4 @@
-from sc2 import Race, Difficulty
+from sc2.data import Race, Difficulty
 from sc2.ids.unit_typeid import UnitTypeId
 from bot.opponent.strategy import Strategy
 
@@ -42,15 +42,15 @@ class Opponent:
             self.too_close_distance = self.bot.start_location.distance_to(self.bot._game_info.map_center)
 
     def refresh(self):
-        if self.bot.known_enemy_units:
-            self.units = self.bot.known_enemy_units
+        if self.bot.enemy_units:
+            self.units = self.bot.enemy_units
             if self.known_race is None:
                 self._set_race(self.units.first.race)
         else:
             self.units = None
 
-        if self.bot.known_enemy_structures:
-            self.structures = self.bot.known_enemy_structures
+        if self.bot.enemy_structures:
+            self.structures = self.bot.enemy_structures
             self.check_rush()
             self.check_cannon_rush()
         else:

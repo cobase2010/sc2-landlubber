@@ -2,11 +2,12 @@ import random
 import sys
 import time
 import sc2
-from sc2 import Difficulty, Race
+from sc2.data import Difficulty, Race
 from sc2.data import race_townhalls
 from sc2.ids.ability_id import AbilityId
 from sc2.ids.unit_typeid import UnitTypeId
 from sc2.player import Bot, Computer
+from sc2.bot_ai import BotAI
 from bot.army.army import ArmyManager
 from bot.opponent.opponent import Opponent
 from bot.economy import economy, tech
@@ -17,8 +18,15 @@ from bot.util.map import Map
 from bot.util.timer import Timer
 
 
-class MyBot(sc2.BotAI):
-    def on_start(self):
+class MyBot(BotAI):
+    def __init__(self):
+        # BotAI.__init__(self)
+        self.proxy_built = False
+        # self.unit_command_uses_self_do = True
+        self.raw_affects_selection = True
+        self.distance_calculation_method: int = 2
+    
+    async def on_before_start(self):
         self.logger = TerminalLogger(self)
         self.debugger = DebugPrinter(self)
         self.opponent = Opponent(self)
@@ -42,7 +50,7 @@ class MyBot(sc2.BotAI):
         self.army_attack_point = None
 
     # Deferred actions after game state is available
-    def on_first_step(self):
+    async def on_start(self):
         self.first_step = False
         start = time.time()
         self.expansions_sorted = economy.get_expansion_order(self.logger, self.expansion_locations, self.start_location)
@@ -59,12 +67,12 @@ class MyBot(sc2.BotAI):
     async def on_step(self, iteration):
         try:
             step_start = time.time()
-            budget = self.time_budget_available  # pylint: disable=no-member
-            if budget and budget < 0.3:
-                self.logger.error(f"Skipping step to avoid post-cooldown vegetable bug, budget {budget:.3f}")
-            else:
-                await self.main_loop()
-                self.debugger.warn_for_step_duration(step_start)
+            # budget = self.time_budget_available  # pylint: disable=no-member
+            # if budget and budget < 0.3:
+            #     self.logger.error(f"Skipping step to avoid post-cooldown vegetable bug, budget {budget:.3f}")
+            # else:
+            await self.main_loop()
+            self.debugger.warn_for_step_duration(step_start)
             self.debugger.step_durations.append(time.time() - step_start)
         except Exception as crash:
             # print("ONLY SUCKERS CRASH!", crash)
@@ -74,7 +82,7 @@ class MyBot(sc2.BotAI):
         if self.state.action_errors:
             self.logger.error(self.state.action_errors)
         if self.first_step:
-            self.on_first_step()
+            await self.on_start()
             return
         else:
             self.opponent.refresh()
@@ -103,8 +111,11 @@ class MyBot(sc2.BotAI):
             await self.builder.begin_projects()
             actions += tech.upgrade_tech(self)
             actions += await economy.produce_larvae(self)
-
-        await self.do_actions(actions)
+        print(actions)
+        # await self.do(actions)
+        # await self._do_actions(actions)
+        # result = await self.client.actions(actions)
+        # return result
 
         if self.match_status_timer.rings:
             self.debugger.print_score()
@@ -116,4 +127,4 @@ class MyBot(sc2.BotAI):
         if scouts:
             for scout in scouts:
                 self.debugger.world_text("scout", scout.position)
-        await self._client.send_debug()
+        await self._client._send_debug()

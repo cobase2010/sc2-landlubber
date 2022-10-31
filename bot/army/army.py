@@ -1,7 +1,7 @@
 import random
 import statistics
 import time
-from sc2.helpers import ControlGroup
+# from sc2.helpers import ControlGroup
 from sc2.ids.unit_typeid import UnitTypeId
 from bot.util import util
 from bot.opponent.strategy import Strategy
@@ -13,6 +13,40 @@ ARMY_SIZE_MAX = 180
 ARMY_MAIN_FORCE_DISPERSION_MAX = 5
 ARMY_MAIN_FORCE_RADIUS = 15
 
+class ControlGroup(set):
+    def __init__(self, units):
+        super().__init__({unit.tag for unit in units})
+
+    def __hash__(self):
+        return hash(tuple(sorted(list(self))))
+
+    def select_units(self, units):
+        return units.filter(lambda unit: unit.tag in self)
+
+    def missing_unit_tags(self, units):
+        return {t for t in self if units.find_by_tag(t) is None}
+
+    @property
+    def amount(self) -> int:
+        return len(self)
+
+    @property
+    def empty(self) -> bool:
+        return self.amount == 0
+
+    def add_unit(self, unit):
+        self.add(unit.tag)
+
+    def add_units(self, units):
+        for unit in units:
+            self.add_unit(unit)
+
+    def remove_unit(self, unit):
+        self.remove(unit.tag)
+
+    def remove_units(self, units):
+        for unit in units:
+            self.remove(unit.tag)
 
 class ArmyManager:
     def __init__(self, bot):
@@ -69,7 +103,7 @@ class ArmyManager:
     def _reinforce_from_reserve_if_empty(self, group, unit_type, up_to=200, drone_fallback=False):
         survivors = group.select_units(self.bot.units)
         if not survivors:
-            reserves = self.reserve.select_units(self.all_combat_units(unit_type)).take(up_to, require_all=False)
+            reserves = self.reserve.select_units(self.all_combat_units(unit_type)).take(up_to)
             for reserve in reserves:
                 self.reserve.remove_unit(reserve)
                 group.add_unit(reserve)
