@@ -3,12 +3,12 @@ from sc2.ids.upgrade_id import UpgradeId
 
 
 def can_research(bot, tech):
-    if tech not in bot.state.upgrades and bot.can_afford(tech):
+    if tech not in bot.state.upgrades  and bot.can_afford(tech):
         if tech in [UpgradeId.ZERGGROUNDARMORSLEVEL2, UpgradeId.ZERGMISSILEWEAPONSLEVEL2, UpgradeId.ZERGFLYERWEAPONSLEVEL2, UpgradeId.ZERGFLYERARMORSLEVEL2]:
-            if bot.units(UnitTypeId.LAIR).exists:
+            if bot.structures(UnitTypeId.LAIR).exists:
                 return True
         elif tech in [UpgradeId.ZERGGROUNDARMORSLEVEL3, UpgradeId.ZERGMISSILEWEAPONSLEVEL3, UpgradeId.ZERGFLYERWEAPONSLEVEL3, UpgradeId.ZERGFLYERARMORSLEVEL3]:
-            if bot.units(UnitTypeId.HIVE).exists:
+            if bot.structures(UnitTypeId.HIVE).exists:
                 return True
         else:
             return True
@@ -24,11 +24,11 @@ def get_tech_to_research(bot, techs):
 
 def upgrade_tech(bot):
     if UpgradeId.GLIALRECONSTITUTION not in bot.state.upgrades and bot.can_afford(UpgradeId.GLIALRECONSTITUTION):
-        if bot.units(UnitTypeId.ROACHWARREN).ready.exists and bot.units(UnitTypeId.LAIR).exists and bot.units(UnitTypeId.ROACHWARREN).ready.noqueue:
-            bot.logger.debug("Researching Glial Reconstitution for roaches")
-            return [bot.units(UnitTypeId.ROACHWARREN).ready.first.research(UpgradeId.GLIALRECONSTITUTION)]
+        if bot.structures(UnitTypeId.ROACHWARREN).ready.exists and bot.structures(UnitTypeId.LAIR).exists and bot.structures(UnitTypeId.ROACHWARREN).ready.idle:
+            bot.logger.info("Researching Glial Reconstitution for roaches")
+            return [bot.structures(UnitTypeId.ROACHWARREN).ready.first.research(UpgradeId.GLIALRECONSTITUTION)]
 
-    idle_chambers = bot.units(UnitTypeId.EVOLUTIONCHAMBER).ready.noqueue
+    idle_chambers = bot.structures(UnitTypeId.EVOLUTIONCHAMBER).ready.idle
     if idle_chambers:
         research_order = [
             UpgradeId.ZERGGROUNDARMORSLEVEL1,
@@ -40,10 +40,10 @@ def upgrade_tech(bot):
         ]
         tech = get_tech_to_research(bot, research_order)
         if tech:
-            bot.logger.debug(f"Researching {tech}")
+            bot.logger.info(f"Researching {tech}")
             return [idle_chambers.first.research(tech)]
 
-    idle_spire = bot.units(UnitTypeId.SPIRE).ready.noqueue
+    idle_spire = bot.structures(UnitTypeId.SPIRE).ready.idle
     if idle_spire:
         research_order = [
             UpgradeId.ZERGFLYERWEAPONSLEVEL1,
@@ -55,7 +55,7 @@ def upgrade_tech(bot):
         ]
         tech = get_tech_to_research(bot, research_order)
         if tech:
-            bot.logger.debug(f"Researching {tech}")
+            bot.logger.info(f"Researching {tech}")
             return [idle_spire.first.research(tech)]
 
     return []

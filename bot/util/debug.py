@@ -62,12 +62,14 @@ class DebugPrinter:
             if self.bot.minerals < 100:
                 reason = "not enough minerals"
             elif self.bot.supply_left < 2:
-                reason = "not enough overlords"
-            self.logger.log(f"{self.bot.units(UnitTypeId.LARVA).amount} unused larvae because {reason}!")
+                reason = "not enough overlords with supply: " + str(self.bot.supply_left)
+            self.logger.debug(f"{self.bot.units(UnitTypeId.LARVA).amount} unused larvae because {reason}!")
+            # self.logger.log(f"{self.bot.units(UnitTypeId.LARVA).amount} unused larvae because {reason}!")
         if self.bot.vespene > 500:
             self.logger.warn("Too much gas!")
         if self.bot.supply_left == 0 and self.bot.units(UnitTypeId.OVERLORD).amount > 1:
-            self.logger.warn("Not enough overlords!")
+            # self.logger.warn("Not enough overlords!" + " Supply:" + str(self.bot.supply_left))
+            self.logger.debug("Not enough overlords!" + " Supply:" + str(self.bot.supply_left))
 
     def warn_for_step_duration(self, step_start):
         duration_millis = (time.time() - step_start) * 1000

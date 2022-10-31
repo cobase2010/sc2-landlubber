@@ -25,7 +25,8 @@ def should_save_for_expansion(bot):
     if len(bot.townhalls.ready) > 1:
         if not bot.townhalls.not_ready and not bot.units.find_by_tag(bot.active_expansion_builder):
             if drone_rate_for_towns(bot.townhalls) >= EXPANSION_DRONE_HARD_THRESHOLD and len(bot.expansions_sorted) > 0:
-                bot.logger.info(f"Saving minerals for a must-have expansion, now {bot.minerals} minerals")
+                # bot.logger.info(f"Saving minerals for a must-have expansion, now {bot.minerals} minerals")
+                bot.logger.debug(f"Saving minerals for a must-have expansion, now {bot.minerals} minerals")
                 return True
     return False
 
@@ -60,15 +61,16 @@ def get_expansion_order(logger, expansion_locations, start_location):
     return sorted
 
 
-async def reassign_overideal_drones(bot):
+def reassign_overideal_drones(bot):
     for old_town in bot.townhalls:
         if old_town.assigned_harvesters > old_town.ideal_harvesters:
             drone = get_reassignable_drone(old_town, bot.workers)
             new_town = get_town_with_free_jobs(bot.townhalls, old_town)
             if new_town and drone:
                 bot.logger.debug("Reassigning drone from overcrowded town")
-                mineral = get_closest_mineral_for_hatchery(bot.state.mineral_field(), new_town)
-                await bot.do_actions([drone.gather(mineral)])
+                mineral = get_closest_mineral_for_hatchery(bot.mineral_field, new_town)
+                drone.gather(mineral)
+                # await bot.do_actions([drone.gather(mineral)])
 
 
 def get_reassignable_drone(town, workers):
@@ -105,22 +107,25 @@ def get_drone_actions(self):
 
 def assign_drones_to_extractors(bot):
     actions = []
-    for extractor in bot.units(UnitTypeId.EXTRACTOR):
+    for extractor in bot.structures(UnitTypeId.EXTRACTOR):
         if extractor.assigned_harvesters < extractor.ideal_harvesters:
             worker = bot.workers.closer_than(20, extractor)
+            # print("worker near extractor:", worker)
             if worker.exists:
                 bot.logger.debug("Assigning drone to extractor")
                 actions.append(worker.random.gather(extractor))
     return actions
 
 
-async def produce_larvae(bot):
+def produce_larvae(bot):
     actions = []
     for queen in bot.units(UnitTypeId.QUEEN).idle:
-        abilities = await bot.get_available_abilities(queen)
-        if AbilityId.EFFECT_INJECTLARVA in abilities:
+        # abilities = bot.get_available_abilities(queen)
+        # if AbilityId.EFFECT_INJECTLARVA in abilities:
+        if queen.energy >= 25:
             bot.logger.debug("Queen creating larvae")
-            actions.append(queen(AbilityId.EFFECT_INJECTLARVA, bot.townhalls.closest_to(queen.position)))
+            queen(AbilityId.EFFECT_INJECTLARVA, bot.townhalls.closest_to(queen.position))
+            # actions.append(queen(AbilityId.EFFECT_INJECTLARVA, bot.townhalls.closest_to(queen.position)))
     return actions
 
 
@@ -130,7 +135,7 @@ def assign_idle_drones_to_minerals(bot):
         new_town = get_town_with_free_jobs(bot.townhalls)
         if new_town:
             bot.logger.debug("Reassigning idle drone")
-            mineral = get_closest_mineral_for_hatchery(bot.state.mineral_field(), new_town)
+            mineral = get_closest_mineral_for_hatchery(bot.mineral_field, new_town)
             actions.append(drone.gather(mineral))
     return actions
 
@@ -140,5 +145,5 @@ def set_hatchery_rally_points(bot):
     for hatch in bot.townhalls:
         actions.append(hatch(AbilityId.RALLY_HATCHERY_UNITS, bot.hq_front_door))
         if not hatch.is_ready:
-            actions.append(hatch(AbilityId.RALLY_HATCHERY_WORKERS, get_closest_mineral_for_hatchery(bot.state.mineral_field(), hatch)))
+            actions.append(hatch(AbilityId.RALLY_HATCHERY_WORKERS, get_closest_mineral_for_hatchery(bot.mineral_field, hatch)))
     return actions

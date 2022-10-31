@@ -112,7 +112,7 @@ class ArmyManager:
                 if drones_available:
                     group.add_unit(drones_available.first)
 
-    async def kamikaze(self):
+    def kamikaze(self):
         bot = self.bot
         if not bot.hq_loss_handled:
             try:
@@ -122,7 +122,7 @@ class ArmyManager:
                 if bot.enemy_start_locations:
                     for unit in bot.units(UnitTypeId.DRONE) | bot.units(UnitTypeId.QUEEN) | self.all_combat_units:
                         actions.append(unit.attack(bot.enemy_start_locations[0]))
-                    await bot.do_actions(actions)
+                    # await bot.do_actions(actions)
             except Exception as e:
                 print(e)
 
@@ -176,7 +176,7 @@ class ArmyManager:
             bot.debugger.world_text("center", units.center)
             towards = None
             if self._large_enough_army(util.get_units_strength(bot, units)):
-
+                
                 towards = bot.opponent.get_next_potential_building_closest_to(bot.army_attack_point)
                 if towards is None and Strategy.HIDDEN_BASE not in self.opponent.strategies:
                     self.logger.warn("Army does not know where to go, time to seek & destroy!")
@@ -199,10 +199,12 @@ class ArmyManager:
                             if dispersion < ARMY_MAIN_FORCE_DISPERSION_MAX: # Attack!
                                 self.logger.debug(f"Tight main force advancing ({dispersion:.0f})")
                             else: # Regroup, too dispersed
-                                self.logger.log(f"Main force is slightly dispersed ({dispersion:.0f})")
+                                # self.logger.log(f"Main force is slightly dispersed ({dispersion:.0f})")
+                                self.logger.debug(f"Main force is slightly dispersed ({dispersion:.0f})")
                                 towards = leader.position
                         else:
-                            self.logger.warning(f"Leader is too alone, pulling back!")
+                            # self.logger.warning(f"Leader is too alone, pulling back!")
+                            self.logger.debug(f"Leader is too alone, pulling back!")
                             towards = units.center
 
             else: # Retreat, too weak!
@@ -212,6 +214,60 @@ class ArmyManager:
             bot.debugger.world_text("towards", towards)
             bot.army_attack_point = towards
             for unit in units:
+                enemies = self.bot.enemy_units.filter(lambda unit: unit.type_id not in {
+                                          UnitTypeId.LARVA, UnitTypeId.EGG})
+                enemy_fighters = enemies.filter(lambda u: u.can_attack) + self.bot.enemy_structures(
+                    {UnitTypeId.BUNKER, UnitTypeId.SPINECRAWLER, UnitTypeId.PHOTONCANNON}
+                )   
+                if enemy_fighters:
+                    # select enemies in range
+                    in_range_enemies = enemy_fighters.in_attack_range_of(
+                        unit)
+                    if in_range_enemies:
+                        # prioritize workers
+                        workers = in_range_enemies(
+                            {UnitTypeId.DRONE, UnitTypeId.SCV, UnitTypeId.PROBE})
+                        if workers:
+                            in_range_enemies = workers
+                        # special micro for ranged units
+                        if unit.ground_range > 1:
+                            # attack if weapon not on cooldown
+                            if unit.weapon_cooldown == 0:
+                                # attack enemy with lowest hp of the ones in range
+                                lowest_hp = min(in_range_enemies, key=lambda e: (
+                                    e.health + e.shield, e.tag))
+                                unit.attack(lowest_hp)
+                            else:
+                                # micro away from closest unit
+                                # move further away if too many enemies are near
+                                friends_in_range = self.bot.units(
+                                    UnitTypeId.STALKER).in_attack_range_of(unit)
+                                closest_enemy = in_range_enemies.closest_to(
+                                    unit)
+                                distance = unit.ground_range + unit.radius + closest_enemy.radius
+                                if (
+                                        len(friends_in_range) <= len(
+                                            in_range_enemies)
+                                        and closest_enemy.ground_range <= unit.ground_range
+                                ):
+                                    distance += 1
+                                else:
+                                    # if more than 5 units friends are close, use distance one shorter than range
+                                    # to let other friendly units get close enough as well and not block each other
+                                    if len(units.closer_than(7, unit.position)) >= 5:
+                                        distance -= -1
+                                unit.move(
+                                    closest_enemy.position.towards(unit, distance))
+                        else:
+                            # target fire with melee units
+                            lowest_hp = min(in_range_enemies, key=lambda e: (
+                                e.health + e.shield, e.tag))
+                            unit.attack(lowest_hp)
+                    else:
+                        # no unit in range, go to closest
+                        unit.move(
+                            enemy_fighters.closest_to(unit))  
+
                 actions.append(unit.attack(bot.army_attack_point))
 
         return actions
@@ -233,29 +289,48 @@ class ArmyManager:
         if scouts:
             for scout in scouts:
                 # Harass workers
-                if self.opponent.known_hq_location and scout.distance_to(self.opponent.known_hq_location) < 3:
-                    worker_enemies = self.opponent.units(UnitTypeId.DRONE) | self.opponent.units(UnitTypeId.PROBE) | self.opponent.units(UnitTypeId.SCV)
-                    if worker_enemies and not scout.is_attacking:
-                        victim = worker_enemies.closest_to(scout.position)
-                        actions.append(scout.attack(victim))
-                else:
-                    location = self.opponent.get_next_scoutable_location()
-                    if location:
-                        actions.append(scout.move(location))
-                # Kite
-                if self.opponent.units:
-                    enemies_closeby = self.opponent.units.filter(lambda unit: unit.can_attack_ground).closer_than(2, scout)
-                    if enemies_closeby and scout.health_percentage < 0.4:
-                        closest_enemy = enemies_closeby.closest_to(scout)
-                        actions.append(scout.move(util.away(scout.position, closest_enemy.position, 4)))
+                if self.opponent:
+                    if self.opponent.known_hq_location and scout.distance_to(self.opponent.known_hq_location) < 3:
+                        enemies = self.bot.enemy_units.filter(lambda unit: unit.type_id not in {
+                                          UnitTypeId.LARVA, UnitTypeId.EGG})
+                        enemy_fighters = enemies.filter(lambda u: u.can_attack) + self.bot.enemy_structures(
+                            {UnitTypeId.BUNKER, UnitTypeId.SPINECRAWLER, UnitTypeId.PHOTONCANNON}
+                        )       
+                        in_range_enemies = enemy_fighters.in_attack_range_of(scout)
+                        if in_range_enemies:
+                        # prioritize workers
+                            worker_enemies = in_range_enemies(
+                                {UnitTypeId.DRONE, UnitTypeId.SCV, UnitTypeId.PROBE})
+                        # worker_enemies = None
+                        # worker_enemies = 
+                        # if self.opponent.units(UnitTypeId.DRONE):
+                        #     worker_enemies = self.opponent.units(UnitTypeId.DRONE)
+                        # elif self.opponent.units(UnitTypeId.PROBE):
+                        #     worker_enemies = self.opponent.units(UnitTypeId.PROBE)
+                        # elif self.opponent.units(UnitTypeId.SCV):
+                        #     worker_enemies = self.opponent.units(UnitTypeId.SCV)
+                        
+                            if worker_enemies and not scout.is_attacking:
+                                victim = worker_enemies.closest_to(scout.position)
+                                actions.append(scout.attack(victim))
+                    else:
+                        location = self.opponent.get_next_scoutable_location()
+                        if location:
+                            actions.append(scout.move(location))
+                    # Kite
+                    if self.opponent.units:
+                        enemies_closeby = self.opponent.units.filter(lambda unit: unit.can_attack_ground).closer_than(2, scout)
+                        if enemies_closeby and scout.health_percentage < 0.4:
+                            closest_enemy = enemies_closeby.closest_to(scout)
+                            actions.append(scout.move(util.away(scout.position, closest_enemy.position, 4)))
 
-                # Home base door verification
-                if not self.has_verified_front_door:
-                    for ramp in self.bot._game_info.map_ramps:
-                        if scout.distance_to(ramp.top_center) < 6:
-                            self.has_verified_front_door = True
-                            self.bot.hq_front_door = ramp.top_center
-                            self.logger.log("Scout verified front door")
+                    # Home base door verification
+                    if not self.has_verified_front_door:
+                        for ramp in self.bot._game_info.map_ramps:
+                            if scout.distance_to(ramp.top_center) < 6:
+                                self.has_verified_front_door = True
+                                self.bot.hq_front_door = ramp.top_center
+                                self.logger.log("Scout verified front door")
         return actions
 
     def scout_no_mans_expansions(self):
@@ -359,7 +434,7 @@ class ArmyManager:
                     # TODO FIXME This will probably bug if several bases are under attack at the same time
                     all_defenders = self.base_defenders.select_units(self.bot.units)
                     if all_defenders:
-                        self.logger.log(f"Defending our base against {enemies.amount} enemies with {all_defenders.amount} defenders: {all_defenders}")
+                        # self.logger.log(f"Defending our base against {enemies.amount} enemies with {all_defenders.amount} defenders: {all_defenders}")
                         for defender in all_defenders:
                             actions.append(defender.attack(enemy.position))
 
@@ -375,7 +450,7 @@ class ArmyManager:
             # Base defenders back to work
             if self.base_defenders and not (self.opponent.units and self.opponent.units.closer_than(10, town).exclude_type(UnitTypeId.OVERLORD)):
                 defenders = self.base_defenders.select_units(self.bot.units)
-                self.logger.log(f"{defenders.amount} defenders calming down")
+                # self.logger.log(f"{defenders.amount} defenders calming down")
                 for unit in defenders:
                     self.base_defenders.remove_unit(unit)
                     if unit.type_id == UnitTypeId.DRONE:

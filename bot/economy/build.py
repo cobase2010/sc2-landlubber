@@ -13,24 +13,27 @@ class Builder:
 
     async def _build_one(self, it):
         bot = self.bot
-        if not (bot.units(it).exists or bot.already_pending(it)) and bot.can_afford(it):
-            self.logger.log(f"Building {it}")
+        if not (bot.structures(it).exists or bot.already_pending(it)) and bot.can_afford(it):
+            self.logger.log(f"{bot.supply_used}: Building {it}")
             await bot.build(it, near=bot.townhalls.first.position.towards(bot._game_info.map_center, 5))
 
     async def _ensure_extractors(self):
         bot = self.bot
-        if bot.units(UnitTypeId.EXTRACTOR).ready.amount > 0 and not bot.units(UnitTypeId.LAIR).ready.exists:
+        if bot.structures(UnitTypeId.EXTRACTOR).ready.amount > 0 and not bot.structures(UnitTypeId.LAIR).ready.exists:
             return
         elif not bot.already_pending(UnitTypeId.EXTRACTOR):
                 for town in bot.townhalls:
                     if town.is_ready and economy.drone_rate_for_towns([town]) >= 0.90:
-                        for geyser in bot.state.vespene_geyser.closer_than(10, town):
-                            if await bot.can_place(UnitTypeId.EXTRACTOR, geyser.position) and bot.can_afford(UnitTypeId.EXTRACTOR):
+                        for geyser in bot.vespene_geyser.closer_than(10, town):
+                            can_we_place = await bot.can_place(UnitTypeId.EXTRACTOR, geyser.position)
+                            if  can_we_place and bot.can_afford(UnitTypeId.EXTRACTOR):
                                 workers = bot.workers.gathering
                                 if workers.exists:
                                     worker = workers.closest_to(geyser)
-                                    self.logger.log("Building extractor")
-                                    await bot.do_actions([worker.build(UnitTypeId.EXTRACTOR, geyser)])
+                                    self.logger.log(f"{bot.supply_used}: Building extractor")
+                                    worker.build(UnitTypeId.EXTRACTOR, geyser)
+                                    # worker.build_gas(geyser)
+                                    # await bot.do_actions([worker.build(UnitTypeId.EXTRACTOR, geyser)])
                                     return
 
     def _should_train_overlord(self):
@@ -53,26 +56,28 @@ class Builder:
             tech_penalty_multiplier = 2
 
         if economy.should_build_hatchery(bot):
-            self.logger.log("Building hatchery")
+            self.logger.log(f"{bot.supply_used}: Building hatchery")
             drone = bot.workers.random
             bot.active_expansion_builder = drone.tag
-            await bot.do_actions([drone.build(UnitTypeId.HATCHERY, bot.expansions_sorted.pop(0))]) # TODO Should not be so naive that sites are available and building will succeed and remain intact
+            drone.build(UnitTypeId.HATCHERY, bot.expansions_sorted.pop(0))
+            # await bot.do_actions([drone.build(UnitTypeId.HATCHERY, bot.expansions_sorted.pop(0))]) # TODO Should not be so naive that sites are available and building will succeed and remain intact
 
         if not economy.should_save_for_expansion(bot):
             await self._build_one(UnitTypeId.SPAWNINGPOOL)
 
-            if bot.units(UnitTypeId.SPAWNINGPOOL).exists:
+            if bot.structures(UnitTypeId.SPAWNINGPOOL).exists:
                 await self._ensure_extractors()
-            if bot.units(UnitTypeId.SPAWNINGPOOL).ready.exists:
+            if bot.structures(UnitTypeId.SPAWNINGPOOL).ready.exists:
                 await self._build_one(UnitTypeId.ROACHWARREN)
 
-            if bot.units(UnitTypeId.ROACHWARREN).ready.exists and self.army.strength >= 500 * tech_penalty_multiplier:
-                if (not bot.units(UnitTypeId.LAIR).exists or bot.already_pending(UnitTypeId.LAIR)) and random_townhall.noqueue:
+            if bot.structures(UnitTypeId.ROACHWARREN).ready.exists and self.army.strength >= 500 * tech_penalty_multiplier:
+                if (not bot.structures(UnitTypeId.LAIR).exists or bot.already_pending(UnitTypeId.LAIR)) and random_townhall.is_idle:
                     if bot.can_afford(UnitTypeId.LAIR):
-                        self.logger.log("Building lair")
-                        await bot.do_actions([random_townhall.build(UnitTypeId.LAIR)])
+                        self.logger.log(f"{bot.supply_used}: Building lair")
+                        random_townhall.build(UnitTypeId.LAIR)
+                        # await bot.do_actions([random_townhall.build(UnitTypeId.LAIR)])
 
-                if bot.units(UnitTypeId.LAIR).ready.exists and len(bot.townhalls.ready) > 1 and self.army.strength >= 500 * tech_penalty_multiplier:
+                if bot.structures(UnitTypeId.LAIR).ready.exists and len(bot.townhalls.ready) > 1 and self.army.strength >= 500 * tech_penalty_multiplier:
                     await self._build_one(UnitTypeId.EVOLUTIONCHAMBER)
                     # await self._build_one(UnitTypeId.HYDRALISKDEN)
                     await self._build_one(UnitTypeId.SPIRE)
@@ -86,31 +91,50 @@ class Builder:
             if town_larvae.exists:
                 larva = town_larvae.random
                 if self._should_train_overlord():
-                    self.logger.log("<- Training overlord")
-                    actions.append(larva.train(UnitTypeId.OVERLORD))
+                    self.logger.log(f"{bot.supply_used}:  overlord")
+                    # actions.append(larva.train(UnitTypeId.OVERLORD))
+                    larva.train(UnitTypeId.OVERLORD)
                 elif economy.should_train_drone(bot, townhall):
-                    self.logger.debug("Training drone, current situation at this expansion {}/{}".format(townhall.assigned_harvesters, townhall.ideal_harvesters))
-                    actions.append(larva.train(UnitTypeId.DRONE))
+                    self.logger.debug(f"{bot.supply_used}: Training drone, current situation at this expansion {townhall.assigned_harvesters}/{townhall.ideal_harvesters}")
+                    # actions.append(larva.train(UnitTypeId.DRONE))
+                    if bot.can_afford(UnitTypeId.DRONE):
+                        larva.train(UnitTypeId.DRONE)
+                    
                 elif not economy.should_save_for_expansion(bot):
-                    if bot.can_afford(UnitTypeId.MUTALISK) and bot.units(UnitTypeId.SPIRE).ready.exists:
-                        self.logger.debug("Training mutalisk")
-                        actions.append(larva.train(UnitTypeId.MUTALISK))
+                    if bot.can_afford(UnitTypeId.MUTALISK) and bot.structures(UnitTypeId.SPIRE).ready:
+                        self.logger.debug(f"{bot.supply_used}: Training mutalisk")
+                        if bot.can_afford(UnitTypeId.MUTALISK):
+                            _amount_trained: int = bot.train(UnitTypeId.MUTALISK, 1)
+                        # actions.append(larva.train(UnitTypeId.MUTALISK))
                     # if bot.can_afford(UnitTypeId.HYDRALISK) and bot.units(UnitTypeId.HYDRALISKDEN).ready.exists:
                     #     self.logger.debug("Training hydralisk")
                     #     actions.append(larva.train(UnitTypeId.HYDRALISK))
-                    elif bot.units(UnitTypeId.ROACHWARREN).ready.exists:
+                    elif bot.structures(UnitTypeId.ROACHWARREN).ready:
+                #         print("can afford roach", bot.can_afford(UnitTypeId.ROACH))
+                #         print(f"n_workers: {bot.workers.amount}, n_idle_workers: {bot.workers.idle.amount},", \
+                # f"minerals: {bot.minerals}, gas: {bot.vespene}, supply: {bot.supply_used}/{bot.supply_cap},", \
+                # f"extractors: {bot.structures(UnitTypeId.EXTRACTOR).amount},", \
+                # f"roachwarren: {bot.structures(UnitTypeId.ROACHWARREN).amount}, spires: {bot.structures(UnitTypeId.SPIRE).amount}", \
+                # f"zerg: {bot.units(UnitTypeId.ZERGLING).amount}, roach: {bot.units(UnitTypeId.ROACH).amount}", )
+            
+
                         if bot.can_afford(UnitTypeId.ROACH):
-                            self.logger.debug("Training roach")
-                            actions.append(larva.train(UnitTypeId.ROACH))
+                            self.logger.info(f"{bot.supply_used}: Training roach")
+                            # actions.append(larva.train(UnitTypeId.ROACH))
+                            _amount_trained: int = bot.train(UnitTypeId.ROACH, 1)
                         elif bot.minerals > 400 and bot.units(UnitTypeId.LARVA).amount > 5:
-                            self.logger.debug("Training late ling because excessive minerals")
-                            actions.append(larva.train(UnitTypeId.ZERGLING))
-                    elif bot.can_afford(UnitTypeId.ZERGLING) and bot.units(UnitTypeId.SPAWNINGPOOL).ready.exists:
-                        self.logger.debug("Training ling")
-                        actions.append(larva.train(UnitTypeId.ZERGLING))
-            if bot.units(UnitTypeId.SPAWNINGPOOL).ready.exists and townhall.is_ready and townhall.noqueue:
+                            self.logger.info(f"{bot.supply_used}: Training late ling because excessive minerals")
+                            # actions.append(larva.train(UnitTypeId.ZERGLING))
+                            if bot.can_afford(UnitTypeId.ZERGLING):
+                                _amount_trained: int = bot.train(UnitTypeId.ZERGLING, 1)
+                    elif bot.can_afford(UnitTypeId.ZERGLING) and bot.structures(UnitTypeId.SPAWNINGPOOL).ready:
+                        self.logger.info(f"{bot.supply_used}: Training ling")
+                        # actions.append(larva.train(UnitTypeId.ZERGLING))
+                        amount_trained: int = bot.train(UnitTypeId.ZERGLING, 1)
+            if bot.structures(UnitTypeId.SPAWNINGPOOL).ready.exists and townhall.is_ready and townhall.is_idle:
                 if bot.can_afford(UnitTypeId.QUEEN):
                     if not bot.units(UnitTypeId.QUEEN).closer_than(15, townhall):
-                        self.logger.debug("Training queen")
-                        actions.append(townhall.train(UnitTypeId.QUEEN))
+                        self.logger.info(f"{bot.supply_used}: Training queen")
+                        # actions.append(townhall.train(UnitTypeId.QUEEN))
+                        amount_trained: int = townhall.train(UnitTypeId.QUEEN)
         return actions

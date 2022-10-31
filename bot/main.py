@@ -61,7 +61,7 @@ class MyBot(BotAI):
         self.map.deferred_init()
         self.logger.log("First step took {:.2f}s".format(time.time() - start))
 
-    def on_end(self, result):
+    async def on_end(self, result):
         self.logger.log(f"Game ended in {result} with score {self.state.score.score}")
 
     async def on_step(self, iteration):
@@ -71,14 +71,14 @@ class MyBot(BotAI):
             # if budget and budget < 0.3:
             #     self.logger.error(f"Skipping step to avoid post-cooldown vegetable bug, budget {budget:.3f}")
             # else:
-            await self.main_loop()
+            await self.main_loop(iteration)
             self.debugger.warn_for_step_duration(step_start)
             self.debugger.step_durations.append(time.time() - step_start)
         except Exception as crash:
             # print("ONLY SUCKERS CRASH!", crash)
             raise crash
 
-    async def main_loop(self):
+    async def main_loop(self, iteration):
         if self.state.action_errors:
             self.logger.error(self.state.action_errors)
         if self.first_step:
@@ -88,13 +88,23 @@ class MyBot(BotAI):
             self.opponent.refresh()
             self.army.refresh()
         if not self.townhalls.exists:
-            await self.army.kamikaze()
+            self.army.kamikaze()
             return
 
         actions = []
+        if iteration % 100 == 0:
+            print(f"{iteration}, n_workers: {self.workers.amount}, n_idle_workers: {self.workers.idle.amount},", \
+                    f"minerals: {self.minerals}, gas: {self.vespene}, supply: {self.supply_used}/{self.supply_cap},", \
+                    f"extractors: {self.structures(UnitTypeId.EXTRACTOR).amount},", \
+                    f"roachwarren: {self.structures(UnitTypeId.ROACHWARREN).amount}, spires: {self.structures(UnitTypeId.SPIRE).amount}", \
+                    f"lair: {self.structures(UnitTypeId.LAIR).amount}, hachery: {self.structures(UnitTypeId.HATCHERY).amount}", \
+                    f"zerg: {self.units(UnitTypeId.ZERGLING).amount}, roach: {self.units(UnitTypeId.ROACH).amount}", \
+                    f"mutalisk: {self.units(UnitTypeId.MUTALISK).amount}, queen: {self.units(UnitTypeId.QUEEN).amount}", \
+                )
+            
 
         if self.drone_eco_optimization_timer.rings:
-            await economy.reassign_overideal_drones(self)
+            economy.reassign_overideal_drones(self)
             actions += economy.get_drone_actions(self)
 
         if self.army_timer.rings:
@@ -110,8 +120,8 @@ class MyBot(BotAI):
             actions += self.builder.train_units()
             await self.builder.begin_projects()
             actions += tech.upgrade_tech(self)
-            actions += await economy.produce_larvae(self)
-        print(actions)
+            actions += economy.produce_larvae(self)
+        # print(actions)
         # await self.do(actions)
         # await self._do_actions(actions)
         # result = await self.client.actions(actions)
